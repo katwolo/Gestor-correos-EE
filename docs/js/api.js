@@ -11,7 +11,7 @@ const Api = (function () {
   async function call(action, payload) {
     const body = {
       action: action,
-      idToken: State.getIdToken(),
+      password: State.getPassword(),
       payload: Object.assign({ sheetId: State.getSheetId() }, payload || {})
     };
 

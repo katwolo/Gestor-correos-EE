@@ -56,10 +56,21 @@ html, body {
 
 .login-card h1 { margin-top: 0; }
 
-#google-signin-button {
+.login-form {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
   margin-top: 16px;
+}
+
+.login-form input {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+  text-align: center;
 }
 
 .error-text { color: var(--danger); font-size: 0.9rem; }

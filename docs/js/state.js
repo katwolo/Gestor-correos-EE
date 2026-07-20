@@ -1,8 +1,7 @@
 const State = (function () {
   const listeners = {};
   const data = {
-    idToken: null,   // en memòria només, mai a localStorage (token de curta durada)
-    email: null,
+    password: null, // només en memòria, mai a localStorage
     sheetId: localStorage.getItem('eeSheetId') || null
   };
 
@@ -23,25 +22,21 @@ const State = (function () {
     emit('sheetId', id);
   }
 
-  function setAuth(idToken, email) {
-    data.idToken = idToken;
-    data.email = email;
-    emit('auth', { idToken: idToken, email: email });
+  function setPassword(password) {
+    data.password = password;
+    emit('auth', !!password);
   }
 
-  function clearAuth() {
-    data.idToken = null;
-    data.email = null;
-    emit('auth', null);
+  function clearPassword() {
+    data.password = null;
+    emit('auth', false);
   }
 
-  function getIdToken() { return data.idToken; }
-  function getEmail() { return data.email; }
+  function getPassword() { return data.password; }
 
   return {
     on: on, emit: emit,
     getSheetId: getSheetId, setSheetId: setSheetId,
-    setAuth: setAuth, clearAuth: clearAuth,
-    getIdToken: getIdToken, getEmail: getEmail
+    setPassword: setPassword, clearPassword: clearPassword, getPassword: getPassword
   };
 })();

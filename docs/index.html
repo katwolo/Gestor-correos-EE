@@ -5,15 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gestor EE</title>
 <link rel="stylesheet" href="css/styles.css">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
 <div id="login-screen" class="login-screen">
   <div class="login-card">
     <h1>Gestor EE</h1>
-    <p>Estades d'Empresa — inicia sessió amb el teu compte de Google per continuar.</p>
-    <div id="google-signin-button"></div>
+    <p>Estades d'Empresa — introdueix la contrasenya per continuar.</p>
+    <form id="login-form" class="login-form">
+      <input id="login-password" type="password" placeholder="Contrasenya" autocomplete="current-password" autofocus>
+      <button type="submit" class="btn-primary">Entra</button>
+    </form>
     <p id="login-error" class="error-text hidden"></p>
   </div>
 </div>
@@ -22,7 +24,7 @@
 
   <header class="app-header">
     <span class="app-title">Gestor EE</span>
-    <span id="user-email" class="user-email"></span>
+    <span class="user-email"></span>
     <button id="logout-btn" class="btn-link">Tanca sessió</button>
   </header>
 

@@ -583,14 +583,19 @@ function doPost(e) {
       return jsonResponse_({ ok: true, data: { time: new Date().toISOString(), version: '1.0' } });
     }
 
-    const email = verificarUsuari_(body.idToken);
+    verificarContrasenya_(body.password);
+
+    if (accio === 'login') {
+      return jsonResponse_({ ok: true, data: { ok: true } });
+    }
+
     const ss = payload.sheetId ? SpreadsheetApp.openById(payload.sheetId) : null;
 
     const necessitaLock = ACCIONS_MUTABLES.indexOf(accio) !== -1;
     const lock = necessitaLock ? LockService.getScriptLock() : null;
     if (lock) lock.waitLock(10000);
     try {
-      const resultat = executarAccio_(accio, payload, ss, email);
+      const resultat = executarAccio_(accio, payload, ss);
       return jsonResponse_({ ok: true, data: resultat });
     } finally {
       if (lock) lock.releaseLock();
@@ -604,39 +609,19 @@ function jsonResponse_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function verificarUsuari_(idToken) {
-  if (!idToken) { const e = new Error('Falta idToken'); e.code = 'UNAUTHORIZED'; throw e; }
-
-  let info;
-  try {
-    const resp = UrlFetchApp.fetch(
-      'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken),
-      { muteHttpExceptions: true }
-    );
-    info = JSON.parse(resp.getContentText());
-  } catch (err) {
-    const e = new Error("No s'ha pogut verificar el token"); e.code = 'UNAUTHORIZED'; throw e;
+// Autenticació simple per contrasenya compartida (Script Property APP_PASSWORD),
+// en lloc de login de Google — evita haver de crear un Client ID d'OAuth.
+function verificarContrasenya_(password) {
+  const esperada = PropertiesService.getScriptProperties().getProperty('APP_PASSWORD');
+  if (!esperada) {
+    const e = new Error('Falta configurar la propietat APP_PASSWORD a Script Properties'); e.code = 'SERVER_ERROR'; throw e;
   }
-
-  const clientId = PropertiesService.getScriptProperties().getProperty('GOOGLE_CLIENT_ID');
-  if (info.error || !info.email || info.aud !== clientId) {
-    const e = new Error('Token invàlid'); e.code = 'UNAUTHORIZED'; throw e;
+  if (!password || password !== esperada) {
+    const e = new Error('Contrasenya incorrecta'); e.code = 'UNAUTHORIZED'; throw e;
   }
-  if (Number(info.exp) * 1000 < Date.now()) {
-    const e = new Error('Token caducat'); e.code = 'UNAUTHORIZED'; throw e;
-  }
-
-  const email = info.email.toLowerCase();
-  const permesos = (PropertiesService.getScriptProperties().getProperty('ALLOWED_EMAILS') || '')
-    .split(',').map(function (s) { return s.trim().toLowerCase(); }).filter(Boolean);
-  if (permesos.indexOf(email) === -1) {
-    const e = new Error('Usuari no autoritzat: ' + email); e.code = 'FORBIDDEN'; throw e;
-  }
-  return email;
 }
 
-function executarAccio_(accio, payload, ss, email) {
-  if (accio === 'whoami') return { email: email };
+function executarAccio_(accio, payload, ss) {
   if (!ss) { const e = new Error('Falta sheetId'); e.code = 'MISSING_SHEET'; throw e; }
 
   switch (accio) {
