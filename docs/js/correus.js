@@ -11,7 +11,6 @@ const Correus = (function () {
 
   function init() {
     document.getElementById('correus-sheet-link-save').addEventListener('click', onSaveLink);
-    document.getElementById('configurar-full-btn').addEventListener('click', onConfigurar);
 
     const input = document.getElementById('correus-sheet-link-input');
     const existing = State.getSheetIdCorreus();
@@ -39,18 +38,6 @@ const Correus = (function () {
     document.getElementById('correus-no-sheet').classList.toggle('hidden', has);
     document.getElementById('correus-wizard').classList.toggle('hidden', !has);
     if (has) loadOptions();
-  }
-
-  async function onConfigurar() {
-    if (!State.getSheetIdCorreus()) return;
-    if (!confirm('Això prepara el full "Enviament" (capçaleres, caselles) i "Plantilles" (plantilles d\'exemple si cal). Es pot executar diverses vegades sense problema. Continuar?')) return;
-    try {
-      const data = await Api.call('configurarFull', { sheetId: State.getSheetIdCorreus() });
-      Util.showToast('Full configurat: ' + data.canvis.length + ' canvi(s) aplicat(s).');
-      loadOptions();
-    } catch (err) {
-      Util.showToast('No s\'ha pogut configurar: ' + err.message, 'error');
-    }
   }
 
   async function loadOptions() {

@@ -71,7 +71,7 @@ Al repositori de GitHub: **Settings → Pages → Source: Deploy from a branch �
 4. A "Excel oficial", enganxa l'enllaç del teu Excel oficial de seguiment → han d'aparèixer les dades del dashboard (incloent el rètol "Amb exempció de pràctiques") i la graella (respecta la primera pestanya).
 5. Edita una cel·la de prova a la graella (p. ex. una llista desplegable com "Contactes amb l'empresa") → comprova que el canvi es reflecteix al Sheet real.
 6. Prova el botó "+ fila" d'una fila → ha d'aparèixer una fila nova buida just a sota al Sheet real (per afegir un segon conveni del mateix alumne, deixant el nom en blanc).
-7. A "Enviar correus", enganxa l'enllaç del Sheet d'enviament (diferent de l'anterior), prem "⚙️ Configurar aquest full" si és la primera vegada, i segueix l'assistent: alumne/a → plantilla (prova també "✏️ Editar aquesta plantilla" i comprova que es desa al Sheet) → adjunts → confirmar. Comprova que la previsualització mostra els destinataris correctes, edita el cos i envia un correu de prova → comprova que arriba el text editat, que `Registre` registra `Estat=OK`, i que si la plantilla era una de les 3 principals, la casella i la data corresponents del Sheet s'actualitzen soles.
+7. A "Enviar correus", enganxa l'enllaç del Sheet d'enviament (diferent de l'anterior) i segueix l'assistent: alumne/a → tutor/a (comprova que es pot editar i desar el nom/correu del tutor/a) → plantilla (prova també "✏️ Editar aquesta plantilla" i comprova que es desa al Sheet) → adjunts → confirmar. Comprova que la previsualització mostra els destinataris correctes, edita el cos i envia un correu de prova → comprova que arriba el text editat, que `Registre` registra `Estat=OK`, i que si la plantilla era una de les 3 principals, la casella i la data corresponents del Sheet s'actualitzen soles.
 8. Prova un enviament amb un adjunt de Drive invàlid barrejat amb un de vàlid → el correu ha d'arribar amb l'adjunt vàlid, no sense cap.
 9. A **Activadors** (rellotge, barra lateral de l'editor d'Apps Script) comprova que `enviament` segueix programat cada dia a les 8:00.
 10. Mòbil: obre la URL de Pages al mòbil (o simula-ho amb les eines de desenvolupador) i navega per les 3 seccions.
@@ -81,7 +81,7 @@ Al repositori de GitHub: **Settings → Pages → Source: Deploy from a branch �
 Quan copiïs qualsevol dels dos Sheets per a un curs nou, no cal tornar a desplegar res:
 
 1. Enganxa el nou enllaç a "Excel oficial" i/o "Enviar correus" (es desen per separat, només al navegador, per curs/dispositiu).
-2. Si el Sheet nou és el d'"Enviar correus", prem "⚙️ Configurar aquest full" perquè tingui les capçaleres i el desplegable de plantilles.
+2. Si el Sheet nou és el d'"Enviar correus" i és un full completament nou (sense capçaleres ni plantilles), executa la funció `configurarFullEnviament` un cop des de l'editor d'Apps Script (Extensions → Apps Script → selecciona la funció → ▶ Executar) perquè es preparin les capçaleres i les plantilles d'exemple.
 
 L'any acadèmic de l'assumpte (`{{anyAcademic}}`) es calcula sol; no cal tocar-lo mai més.
 
