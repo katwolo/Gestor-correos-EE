@@ -42,14 +42,14 @@ const Excel = (function () {
 
   function renderGrid(data) {
     const table = document.getElementById('excel-table');
-    const theadCells = data.headers.map(function (h) { return '<th>' + Util.escapeHtml(h) + '</th>'; }).join('') + '<th></th>';
+    const theadCells = '<th class="add-row-col"></th>' + data.headers.map(function (h) { return '<th>' + Util.escapeHtml(h) + '</th>'; }).join('');
     const bodyRows = data.rows.map(function (rowObj) {
+      const addRowBtn = '<td class="add-row-col"><button class="add-row-btn" data-after-row="' + rowObj.row +
+        '" title="Insereix una fila nova (nou conveni) just després d\'aquesta">+</button></td>';
       const cells = rowObj.values.map(function (value, colIdx) {
         return renderCell(value, rowObj.row, colIdx, data.columnTypes[colIdx] || { tipus: 'text' });
       }).join('');
-      const addRowBtn = '<td><button class="add-row-btn" data-after-row="' + rowObj.row +
-        '" title="Insereix una fila nova (nou conveni) just després d\'aquesta">+ fila</button></td>';
-      return '<tr>' + cells + addRowBtn + '</tr>';
+      return '<tr>' + addRowBtn + cells + '</tr>';
     }).join('');
 
     table.innerHTML = '<thead><tr>' + theadCells + '</tr></thead><tbody>' + bodyRows + '</tbody>';

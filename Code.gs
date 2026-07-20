@@ -135,9 +135,23 @@ function assegurarColumnes_(hoja, num) {
   if (actuals < num) hoja.insertColumnsAfter(actuals, num - actuals);
 }
 
+// Columna Q (17a) opcional amb el cognom de l'alumne/a; es combina amb la
+// columna A ("Nom alumne/a") perquè el picker i els correus mostrin nom i
+// cognoms sense haver de canviar cap dels marcadors existents.
+function construirInfoAlumne_(fila) {
+  const nom = fila[0] ? String(fila[0]).trim() : '';
+  const cognoms = fila[16] ? String(fila[16]).trim() : '';
+  return {
+    nomAlumne: cognoms ? (nom + ' ' + cognoms) : nom,
+    correuAlumne: fila[1],
+    nomTutor: fila[2],
+    correuTutor: fila[3]
+  };
+}
+
 function processarEnviaments_(ss) {
   const hoja = ss.getSheetByName(SHEETS.ENVIAMENT);
-  assegurarColumnes_(hoja, 16);
+  assegurarColumnes_(hoja, 17);
   const hojaPlantilles = ss.getSheetByName(SHEETS.PLANTILLES);
   const hojaRegistro = prepararHojaRegistro_(ss);
   const assumpteBase = obtenirAssumpteBase_(hojaPlantilles);
@@ -145,13 +159,13 @@ function processarEnviaments_(ss) {
 
   const last = hoja.getLastRow();
   if (last < 2) return;
-  const dades = hoja.getRange(2, 1, last - 1, 16).getValues();
+  const dades = hoja.getRange(2, 1, last - 1, 17).getValues();
   const ara = new Date();
   const problemes = [];
 
   for (let i = 0; i < dades.length; i++) {
     const fila = dades[i];
-    const infoAlumne = { nomAlumne: fila[0], correuAlumne: fila[1], nomTutor: fila[2], correuTutor: fila[3] };
+    const infoAlumne = construirInfoAlumne_(fila);
 
     BLOCS.forEach(function (bloc) {
       const casellaMarcada = fila[bloc.casella];
@@ -366,11 +380,13 @@ function obtenirOCrearFull_(ss, nom) {
 }
 
 // Capçaleres base A:P d'"Enviament" (només s'escriuen les cel·les que estiguin buides).
+// La Q (17) és opcional: si s'omple, es combina amb la A per mostrar/enviar "Nom Cognoms".
 const CAPÇALERES_BASE_ENVIAMENT = [
   [1, 'Nom alumne/a'], [2, 'Correu alumnat'], [3, "Nom tutor/a d'empresa"], [4, 'Correu tutor/a'],
   [5, '✅'], [6, 'Plantilla'], [7, 'Adjunt (opcional)'], [8, 'Data Contacte inicial'],
   [9, '✅'], [10, 'Plantilla'], [11, 'Adjunt (opcional)'], [12, 'Data Seguiment'],
-  [13, '✅'], [14, 'Plantilla'], [15, 'Adjunt (opcional)'], [16, 'Data Valoració Final']
+  [13, '✅'], [14, 'Plantilla'], [15, 'Adjunt (opcional)'], [16, 'Data Valoració Final'],
+  [17, 'Cognoms (opcional)']
 ];
 
 // Plantilles d'exemple perquè l'eina funcioni "out of the box" en un full nou.
@@ -390,7 +406,7 @@ function configurarFullEnviament_(ss) {
   const canvis = [];
 
   const hoja = obtenirOCrearFull_(ss, SHEETS.ENVIAMENT);
-  assegurarColumnes_(hoja, 16);
+  assegurarColumnes_(hoja, 17);
 
   CAPÇALERES_BASE_ENVIAMENT.forEach(function (parell) {
     const cel = hoja.getRange(1, parell[0]);
@@ -756,10 +772,13 @@ function obtenirAlumnes_(ss) {
   const hoja = ss.getSheetByName(SHEETS.ENVIAMENT);
   const last = hoja.getLastRow();
   if (last < 2) return { alumnes: [] };
-  const dades = hoja.getRange(2, 1, last - 1, 4).getValues();
+  assegurarColumnes_(hoja, 17);
+  const dades = hoja.getRange(2, 1, last - 1, 17).getValues();
   const alumnes = dades
     .map(function (fila, i) {
-      return { row: i + 2, nomAlumne: fila[0], correuAlumne: fila[1], nomTutor: fila[2], correuTutor: fila[3] };
+      const info = construirInfoAlumne_(fila);
+      info.row = i + 2;
+      return info;
     })
     .filter(function (a) { return a.nomAlumne; });
   return { alumnes: alumnes };
@@ -768,8 +787,9 @@ function obtenirAlumnes_(ss) {
 function generarAssumpteICos_(ss, alumneRow, plantillaNom) {
   const hojaEnviament = ss.getSheetByName(SHEETS.ENVIAMENT);
   const hojaPlantilles = ss.getSheetByName(SHEETS.PLANTILLES);
-  const fila = hojaEnviament.getRange(alumneRow, 1, 1, 4).getValues()[0];
-  const dades = { nomAlumne: fila[0], correuAlumne: fila[1], nomTutor: fila[2], correuTutor: fila[3] };
+  assegurarColumnes_(hojaEnviament, 17);
+  const fila = hojaEnviament.getRange(alumneRow, 1, 1, 17).getValues()[0];
+  const dades = construirInfoAlumne_(fila);
 
   const plantilles = cargarPlantilles_(hojaPlantilles);
   const plantillaObj = plantilles[String(plantillaNom || '').trim().toLowerCase()];
@@ -788,8 +808,9 @@ function accioEnviarCorreu_(payload, ss) {
   const hojaPlantilles = ss.getSheetByName(SHEETS.PLANTILLES);
   const hojaRegistro = prepararHojaRegistro_(ss);
 
-  const fila = hoja.getRange(payload.alumneRow, 1, 1, 4).getValues()[0];
-  const dades = { nomAlumne: fila[0], correuAlumne: fila[1], nomTutor: fila[2], correuTutor: fila[3] };
+  assegurarColumnes_(hoja, 17);
+  const fila = hoja.getRange(payload.alumneRow, 1, 1, 17).getValues()[0];
+  const dades = construirInfoAlumne_(fila);
 
   const plantilles = cargarPlantilles_(hojaPlantilles);
   const plantillaObj = plantilles[String(payload.plantillaNom || '').trim().toLowerCase()];

@@ -191,10 +191,16 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
+  transition: border-color 0.15s, transform 0.1s;
 }
 
 .tile .tile-value { font-size: 1.8rem; font-weight: 700; }
 .tile .tile-label { color: var(--text-muted); font-size: 0.8rem; }
+
+.tile-clickable { cursor: pointer; }
+.tile-clickable:hover { border-color: var(--primary); }
+.tile-clickable:active { transform: scale(0.98); }
+.tile-active { border-color: var(--primary); border-width: 2px; box-shadow: 0 0 0 1px var(--primary); }
 
 /* ---- Student list ---- */
 
@@ -243,7 +249,12 @@ html, body {
 }
 .tab-btn.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
 
-.table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+.table-scroll {
+  overflow: auto;
+  max-height: 70vh;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
 
 .excel-table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
 .excel-table th, .excel-table td {
@@ -252,20 +263,30 @@ html, body {
   padding: 6px 8px;
   white-space: nowrap;
 }
-.excel-table th { background: var(--surface); position: sticky; top: 0; text-align: left; }
+.excel-table th { background: var(--surface); position: sticky; top: 0; text-align: left; z-index: 2; }
 .excel-table td[contenteditable="true"] { cursor: text; white-space: normal; min-width: 120px; }
 .excel-table td.saved { background: rgba(22, 163, 74, 0.15); }
 .excel-table td.save-error { background: rgba(220, 38, 38, 0.15); }
+
+.excel-table .add-row-col {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  text-align: center;
+  z-index: 1;
+}
+.excel-table th.add-row-col { z-index: 3; }
 
 .add-row-btn {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-muted);
   border-radius: 6px;
-  padding: 3px 8px;
-  font-size: 0.75rem;
+  width: 26px;
+  height: 26px;
+  line-height: 1;
+  font-size: 0.9rem;
   cursor: pointer;
-  white-space: nowrap;
 }
 .add-row-btn:hover { color: var(--primary); border-color: var(--primary); }
 
@@ -274,21 +295,97 @@ html, body {
 .form-row { margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px; }
 .form-row input, .form-row select { padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
 
+.wizard-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+}
+
 .wizard-stepper {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 18px;
+  gap: 4px;
+  margin-bottom: 20px;
   font-size: 0.8rem;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
 }
-.wizard-step-badge { color: var(--text-muted); padding: 4px 8px; border-radius: 999px; }
+.wizard-step-badge { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); padding: 5px 10px; border-radius: 999px; }
+.wizard-step-icon { font-size: 0.9rem; }
 .wizard-step-badge.active { background: var(--primary); color: var(--primary-text); font-weight: 600; }
 .wizard-step-badge.done { color: var(--success); }
 .wizard-step-arrow { color: var(--text-muted); }
 
-.wizard-step select[size] { width: 100%; }
+.wizard-step h3 { margin-top: 0; }
 .wizard-back { display: block; margin-bottom: 10px; }
+
+.wizard-search {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+}
+
+.wizard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.list-item:hover { border-color: var(--primary); background: rgba(37, 99, 235, 0.06); }
+.list-item-selected { border-color: var(--primary); background: rgba(37, 99, 235, 0.1); border-width: 2px; }
+.list-item-title { font-weight: 600; }
+.list-item-sub { color: var(--text-muted); font-size: 0.8rem; }
+
+.destinatari-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.destinatari-tutor { background: rgba(37, 99, 235, 0.15); color: var(--primary); }
+.destinatari-alumnat { background: rgba(22, 163, 74, 0.15); color: var(--success); }
+.destinatari-ambdos { background: rgba(217, 119, 6, 0.15); color: #d97706; }
+
+.preview-box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--bg);
+}
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-block;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+.chip-warning { background: rgba(220, 38, 38, 0.12); color: var(--danger); }
 
 .plantilla-editor {
   margin-top: 10px;

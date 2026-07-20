@@ -1,10 +1,13 @@
 const Correus = (function () {
   let alumnes = [];
   let plantilles = [];
+  let cercaAlumne = '';
   let wizard = { step: 'alumne', alumneRow: null, plantillaNom: null, adjunts: '', assumpte: '', cos: '', destinataris: [] };
 
   const STEP_ORDER = ['alumne', 'plantilla', 'adjunts', 'confirmar'];
   const STEP_LABELS = { alumne: 'Alumne/a', plantilla: 'Plantilla', adjunts: 'Adjunts', confirmar: 'Confirmar' };
+  const STEP_ICONS = { alumne: '👤', plantilla: '📄', adjunts: '📎', confirmar: '✅' };
+  const DESTINATARI_LABELS = { 'tutor/a': 'Tutor/a', alumnat: 'Alumnat', 'ambdós': 'Ambdós' };
 
   function init() {
     document.getElementById('correus-sheet-link-save').addEventListener('click', onSaveLink);
@@ -68,6 +71,7 @@ const Correus = (function () {
 
   function resetWizard() {
     wizard = { step: 'alumne', alumneRow: null, plantillaNom: null, adjunts: '', assumpte: '', cos: '', destinataris: [] };
+    cercaAlumne = '';
     render();
   }
 
@@ -77,7 +81,7 @@ const Correus = (function () {
 
   function render() {
     const root = document.getElementById('correus-wizard');
-    root.innerHTML = renderStepper() + renderStepBody();
+    root.innerHTML = '<div class="wizard-card">' + renderStepper() + renderStepBody() + '</div>';
     wireStepEvents();
   }
 
@@ -86,8 +90,8 @@ const Correus = (function () {
       const done = STEP_ORDER.indexOf(wizard.step) > i;
       const active = wizard.step === s;
       const cls = active ? 'active' : (done ? 'done' : '');
-      return '<span class="wizard-step-badge ' + cls + '">' + (i + 1) + '. ' + STEP_LABELS[s] + '</span>';
-    }).join('<span class="wizard-step-arrow">→</span>') + '</div>';
+      return '<span class="wizard-step-badge ' + cls + '"><span class="wizard-step-icon">' + STEP_ICONS[s] + '</span>' + STEP_LABELS[s] + '</span>';
+    }).join('<span class="wizard-step-arrow">›</span>') + '</div>';
   }
 
   function renderStepBody() {
@@ -101,15 +105,20 @@ const Correus = (function () {
     if (!alumnes.length) {
       return '<p class="hint-text">Encara no hi ha alumnes al full "Enviament".</p>';
     }
+    const filtrats = alumnes.filter(function (a) {
+      return !cercaAlumne || a.nomAlumne.toLowerCase().indexOf(cercaAlumne.toLowerCase()) !== -1;
+    });
     return '<div class="wizard-step">' +
       '<h3>Selecciona l\'alumne/a</h3>' +
-      '<select id="w-alumne" size="8">' +
-      '<option value="">-- Selecciona --</option>' +
-      alumnes.map(function (a) {
-        return '<option value="' + a.row + '">' + Util.escapeHtml(a.nomAlumne) +
-          (a.nomTutor ? ' — tutor/a: ' + Util.escapeHtml(a.nomTutor) : '') + '</option>';
-      }).join('') +
-      '</select>' +
+      '<input id="w-cerca-alumne" type="text" class="wizard-search" placeholder="🔎 Cerca per nom..." value="' + Util.escapeHtml(cercaAlumne) + '">' +
+      '<div class="wizard-list">' +
+      (filtrats.length ? filtrats.map(function (a) {
+        return '<div class="list-item" data-row="' + a.row + '">' +
+          '<div class="list-item-title">' + Util.escapeHtml(a.nomAlumne) + '</div>' +
+          (a.nomTutor ? '<div class="list-item-sub">Tutor/a: ' + Util.escapeHtml(a.nomTutor) + '</div>' : '') +
+          '</div>';
+      }).join('') : '<p class="hint-text">Cap alumne coincideix amb la cerca.</p>') +
+      '</div>' +
       '</div>';
   }
 
@@ -120,20 +129,29 @@ const Correus = (function () {
       '<button class="btn-link wizard-back" data-goto="alumne">← Canvia d\'alumne/a</button>' +
       '<h3>Selecciona la plantilla</h3>' +
       '<p class="hint-text">Alumne/a: <strong>' + Util.escapeHtml(alumne ? alumne.nomAlumne : '') + '</strong></p>' +
-      '<select id="w-plantilla" size="6">' +
-      '<option value="">-- Selecciona --</option>' +
+      '<div class="wizard-list">' +
       plantilles.map(function (p) {
-        return '<option value="' + Util.escapeHtml(p.nom) + '"' + (p.nom === wizard.plantillaNom ? ' selected' : '') + '>' + Util.escapeHtml(p.nom) + '</option>';
+        const activa = p.nom === wizard.plantillaNom;
+        return '<div class="list-item' + (activa ? ' list-item-selected' : '') + '" data-plantilla="' + Util.escapeHtml(p.nom) + '">' +
+          '<div class="list-item-title">' + Util.escapeHtml(p.nom) + '</div>' +
+          '<span class="destinatari-badge destinatari-' + destinatariClasse(p.destinatari) + '">' + Util.escapeHtml(DESTINATARI_LABELS[p.destinatari] || p.destinatari) + '</span>' +
+          '</div>';
       }).join('') +
-      '</select>' +
+      '</div>' +
       (plantillaActual ? '<button id="w-editar-plantilla" class="btn-link">✏️ Editar aquesta plantilla</button>' : '') +
       '<div id="w-editor-plantilla"></div>' +
       (wizard.plantillaNom ? '<button id="w-continuar-plantilla" class="btn-primary">Continuar →</button>' : '') +
       '</div>';
   }
 
+  function destinatariClasse(d) {
+    if (d === 'alumnat') return 'alumnat';
+    if (d === 'ambdós') return 'ambdos';
+    return 'tutor';
+  }
+
   function renderEditorPlantilla(p) {
-    const destinatariMostrat = { 'tutor/a': 'Tutor/a', alumnat: 'Alumnat', 'ambdós': 'Ambdós' }[p.destinatari] || 'Tutor/a';
+    const destinatariMostrat = DESTINATARI_LABELS[p.destinatari] || 'Tutor/a';
     return '<div class="plantilla-editor">' +
       '<div class="form-row"><label>Destinatari</label>' +
       '<select id="w-editar-destinatari">' +
@@ -161,11 +179,14 @@ const Correus = (function () {
   }
 
   function renderConfirmarStep() {
+    const chips = wizard.destinataris.length
+      ? wizard.destinataris.map(function (d) { return '<span class="chip">' + Util.escapeHtml(d) + '</span>'; }).join('')
+      : '<span class="chip chip-warning">cap destinatari vàlid</span>';
     return '<div class="wizard-step">' +
       '<button class="btn-link wizard-back" data-goto="adjunts">← Canvia adjunts</button>' +
       '<h3>Confirma i envia</h3>' +
-      '<p class="hint-text">Es enviarà a: <strong>' + (wizard.destinataris.length ? wizard.destinataris.map(Util.escapeHtml).join(', ') : 'cap destinatari vàlid') + '</strong></p>' +
-      '<div class="form-row"><label>Assumpte</label><div class="hint-text">' + Util.escapeHtml(wizard.assumpte) + '</div></div>' +
+      '<div class="form-row"><label>Es enviarà a</label><div class="chip-row">' + chips + '</div></div>' +
+      '<div class="form-row"><label>Assumpte</label><div class="preview-box">' + Util.escapeHtml(wizard.assumpte) + '</div></div>' +
       '<div class="form-row"><label>Cos del correu</label><div id="w-cos" class="cos-editable" contenteditable="true">' + wizard.cos + '</div></div>' +
       '<button id="w-enviar" class="btn-primary">Enviar correu</button> ' +
       '<button id="w-cancelar" class="btn-link">Cancel·la i torna a l\'inici</button>' +
@@ -181,16 +202,29 @@ const Correus = (function () {
     });
 
     if (wizard.step === 'alumne') {
-      document.getElementById('w-alumne').addEventListener('change', function (ev) {
-        wizard.alumneRow = Number(ev.target.value) || null;
-        if (wizard.alumneRow) { wizard.step = 'plantilla'; render(); }
+      const cercaInput = document.getElementById('w-cerca-alumne');
+      cercaInput.addEventListener('input', Util.debounce(function (ev) {
+        cercaAlumne = ev.target.value;
+        render();
+        document.getElementById('w-cerca-alumne').focus();
+        const val = document.getElementById('w-cerca-alumne').value;
+        document.getElementById('w-cerca-alumne').setSelectionRange(val.length, val.length);
+      }, 150));
+      document.querySelectorAll('#correus-wizard .wizard-list .list-item').forEach(function (el) {
+        el.addEventListener('click', function () {
+          wizard.alumneRow = Number(el.dataset.row);
+          wizard.step = 'plantilla';
+          render();
+        });
       });
     }
 
     if (wizard.step === 'plantilla') {
-      document.getElementById('w-plantilla').addEventListener('change', function (ev) {
-        wizard.plantillaNom = ev.target.value || null;
-        render();
+      document.querySelectorAll('#correus-wizard .wizard-list .list-item').forEach(function (el) {
+        el.addEventListener('click', function () {
+          wizard.plantillaNom = el.dataset.plantilla;
+          render();
+        });
       });
       const editarBtn = document.getElementById('w-editar-plantilla');
       if (editarBtn) editarBtn.addEventListener('click', onEditarPlantilla);
