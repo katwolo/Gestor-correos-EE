@@ -440,13 +440,67 @@ function configurarFullEnviament() {
   }
 }
 
+// Crea el full si no existeix (permet configurar una spreadsheet totalment en blanc).
+function obtenirOCrearFull_(ss, nom) {
+  let hoja = ss.getSheetByName(nom);
+  if (!hoja) hoja = ss.insertSheet(nom);
+  return hoja;
+}
+
+// Capçaleres base A:P d'"Enviament" (només s'escriuen les cel·les que estiguin buides).
+const CAPÇALERES_BASE_ENVIAMENT = [
+  [1, 'Nom alumne/a'], [2, 'Correu alumnat'], [3, "Nom tutor/a d'empresa"], [4, 'Correu tutor/a'],
+  [5, '✅'], [6, 'Plantilla'], [7, 'Adjunt (opcional)'], [8, 'Data Contacte inicial'],
+  [9, '✅'], [10, 'Plantilla'], [11, 'Adjunt (opcional)'], [12, 'Data Seguiment'],
+  [13, '✅'], [14, 'Plantilla'], [15, 'Adjunt (opcional)'], [16, 'Data Valoració Final']
+];
+
+// Plantilles d'exemple perquè l'eina funcioni "out of the box" en un full nou.
+const PLANTILLES_EXEMPLE = [
+  ['contacteinicial',
+    "<p>Bon dia, {{nombreTutor}},</p><p>Sóc el tutor/a de {{nombreAlumno}} i em poso en contacte per iniciar el seguiment de les pràctiques.</p><p>Salutacions cordials.</p>",
+    'Tutor/a'],
+  ['seguiment',
+    "<p>Bon dia, {{nombreTutor}},</p><p>Com va {{nombreAlumno}} durant aquest període de pràctiques? Si tens algun comentari que ens pugui ajudar, ens agradaria conèixer-lo.</p><p>Salutacions cordials.</p>",
+    'Tutor/a'],
+  ['valoració final',
+    "<p>Bon dia, {{nombreTutor}},</p><p>Estem arribant al final de les pràctiques de {{nombreAlumno}} i ens agradaria rebre la teva valoració del procés.</p><p>Salutacions cordials.</p>",
+    'Tutor/a']
+];
+
 function configurarFullEnviament_(ss) {
   const canvis = [];
-  const hoja = ss.getSheetByName(SHEETS.ENVIAMENT);
-  assegurarColumnes_(hoja, 21);
-  const hojaPlantilles = ss.getSheetByName(SHEETS.PLANTILLES);
-  const last = hoja.getLastRow();
 
+  const hoja = obtenirOCrearFull_(ss, SHEETS.ENVIAMENT);
+  assegurarColumnes_(hoja, 21);
+
+  CAPÇALERES_BASE_ENVIAMENT.forEach(function (parell) {
+    const cel = hoja.getRange(1, parell[0]);
+    if (!cel.getValue()) {
+      cel.setValue(parell[1]);
+      canvis.push('Capçalera base "' + parell[1] + '" afegida.');
+    }
+  });
+
+  const hojaPlantilles = obtenirOCrearFull_(ss, SHEETS.PLANTILLES);
+  const assumpteCel = hojaPlantilles.getRange('B1');
+  if (!assumpteCel.getValue()) {
+    assumpteCel.setValue('EE IEB {{nombreAlumno}} {{anyAcademic}}');
+    canvis.push('Assumpte per defecte creat a Plantilles!B1.');
+  }
+  [[1, 'Nom plantilla'], [2, 'Cos del correu'], [3, 'Destinatari']].forEach(function (parell) {
+    const cel = hojaPlantilles.getRange(4, parell[0]);
+    if (!cel.getValue()) cel.setValue(parell[1]);
+  });
+  if (hojaPlantilles.getLastRow() < 5) {
+    hojaPlantilles.getRange(5, 1, PLANTILLES_EXEMPLE.length, 3).setValues(PLANTILLES_EXEMPLE);
+    canvis.push(PLANTILLES_EXEMPLE.length + ' plantilles d\'exemple afegides (edita-les al teu gust).');
+  }
+  const validacioDestinatari = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Tutor/a', 'Alumnat', 'Ambdós'], true).setAllowInvalid(true).build();
+  hojaPlantilles.getRange(5, 3, Math.max(1, hojaPlantilles.getLastRow() - 4), 1).setDataValidation(validacioDestinatari);
+
+  const last = hoja.getLastRow();
   if (last >= 1) {
     const capçaleresNoves = [
       [17, "Sol·licitud de dades"], [18, 'REF05/REF06'], [19, 'Devolució firmada'],
@@ -462,7 +516,10 @@ function configurarFullEnviament_(ss) {
 
     if (last > 1) {
       hoja.getRange(2, 17, last - 1, 5).insertCheckboxes();
-      canvis.push('Caselles Q:U activades per a ' + (last - 1) + ' files.');
+      hoja.getRange(2, 5, last - 1, 1).insertCheckboxes();
+      hoja.getRange(2, 9, last - 1, 1).insertCheckboxes();
+      hoja.getRange(2, 13, last - 1, 1).insertCheckboxes();
+      canvis.push('Caselles de tots els blocs (E, I, M, Q:U) activades per a ' + (last - 1) + ' files.');
     }
   }
 
