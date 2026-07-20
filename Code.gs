@@ -429,7 +429,15 @@ function obtenirEstadistiquesRegistre_(ss) {
 function configurarFullEnviament() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const resum = configurarFullEnviament_(ss);
-  SpreadsheetApp.getUi().alert('Configuració completada', resum.join('\n'), SpreadsheetApp.getUi().ButtonSet.OK);
+  // getUi() només funciona si es crida des del menú del propi full; si s'executa
+  // manualment des de l'editor d'Apps Script (com en la primera configuració),
+  // no hi ha UI disponible i llançaria un error — el resum ja queda igualment
+  // registrat, així que només mostrem l'alerta quan és possible.
+  try {
+    SpreadsheetApp.getUi().alert('Configuració completada', resum.join('\n'), SpreadsheetApp.getUi().ButtonSet.OK);
+  } catch (err) {
+    Logger.log('Configuració completada:\n' + resum.join('\n'));
+  }
 }
 
 function configurarFullEnviament_(ss) {
