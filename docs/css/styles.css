@@ -75,6 +75,15 @@ html, body {
 
 .error-text { color: var(--danger); font-size: 0.9rem; }
 
+#dev-access-btn {
+  margin-top: 18px;
+  border: 1px dashed var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  width: 100%;
+}
+
 /* ---- App shell ---- */
 
 .app-shell {
