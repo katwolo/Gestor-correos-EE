@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestor EE</title>
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <h1>Gestor EE</h1>
+    <p>Estades d'Empresa — inicia sessió amb el teu compte de Google per continuar.</p>
+    <div id="google-signin-button"></div>
+    <p id="login-error" class="error-text hidden"></p>
+  </div>
+</div>
+
+<div id="app-shell" class="app-shell hidden">
+
+  <header class="app-header">
+    <span class="app-title">Gestor EE</span>
+    <span id="user-email" class="user-email"></span>
+    <button id="logout-btn" class="btn-link">Tanca sessió</button>
+  </header>
+
+  <nav class="app-nav">
+    <button class="nav-btn active" data-section="dashboard">
+      <span class="nav-icon">🏠</span><span>Dashboard</span>
+    </button>
+    <button class="nav-btn" data-section="excel">
+      <span class="nav-icon">📊</span><span>Excel oficial</span>
+    </button>
+    <button class="nav-btn" data-section="correus">
+      <span class="nav-icon">✉️</span><span>Enviar correus</span>
+    </button>
+  </nav>
+
+  <main class="app-main">
+
+    <section id="section-dashboard" class="app-section active">
+      <div id="dashboard-no-sheet" class="notice hidden">
+        Encara no hi ha cap Google Sheets configurat. Ves a <strong>Excel oficial</strong> i enganxa l'enllaç.
+      </div>
+      <div id="dashboard-tiles" class="tiles-grid"></div>
+      <h2>Alumnat</h2>
+      <div id="dashboard-students" class="student-list"></div>
+    </section>
+
+    <section id="section-excel" class="app-section">
+      <div class="sheet-link-box">
+        <label for="sheet-link-input">Enllaç del Google Sheets oficial</label>
+        <div class="sheet-link-row">
+          <input id="sheet-link-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/...">
+          <button id="sheet-link-save" class="btn-primary">Desa</button>
+        </div>
+        <p id="sheet-link-status" class="hint-text"></p>
+      </div>
+
+      <div id="excel-no-sheet" class="notice hidden">Enganxa i desa l'enllaç del Sheet per veure'n les dades.</div>
+
+      <div id="excel-grid-wrap" class="hidden">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="Enviament">Enviament</button>
+          <button class="tab-btn" data-tab="Plantilles">Plantilles</button>
+          <button class="tab-btn" data-tab="Registre">Registre</button>
+          <button id="configurar-full-btn" class="tab-btn" title="Prepara aquest full (columnes Q-U, desplegable de plantilles) — necessari un cop per full nou">⚙️ Configurar aquest full</button>
+        </div>
+        <div class="table-scroll">
+          <table id="excel-table" class="excel-table"></table>
+        </div>
+      </div>
+    </section>
+
+    <section id="section-correus" class="app-section">
+      <div id="correus-no-sheet" class="notice hidden">Configura primer l'enllaç del Sheet a "Excel oficial".</div>
+
+      <div id="correus-form" class="correus-form hidden">
+        <div class="form-row">
+          <label for="correus-alumne">Alumne/a</label>
+          <select id="correus-alumne"></select>
+        </div>
+        <div class="form-row">
+          <label for="correus-plantilla">Plantilla</label>
+          <select id="correus-plantilla"></select>
+        </div>
+        <div class="form-row">
+          <label for="correus-assumpte">Assumpte</label>
+          <input id="correus-assumpte" type="text">
+        </div>
+        <div class="form-row">
+          <label>Cos del correu</label>
+          <div id="correus-cos" class="cos-editable" contenteditable="true"></div>
+        </div>
+        <div class="form-row">
+          <label for="correus-adjunts">Adjunts (enllaços de Drive, separats per comes)</label>
+          <input id="correus-adjunts" type="text" placeholder="https://drive.google.com/...">
+        </div>
+        <button id="correus-enviar" class="btn-primary">Enviar correu</button>
+        <p id="correus-resultat" class="hint-text"></p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/config.js"></script>
+<script src="js/util.js"></script>
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/excel.js"></script>
+<script src="js/correus.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

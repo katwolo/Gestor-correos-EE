@@ -33,6 +33,8 @@ Un trigger diari (8:00) executa `enviament()` automàticament; `onOpen()` crea e
 
 ## 2. Problemes detectats
 
+> **Actualització:** els 7 punts d'aquest apartat queden resolts a `Code.gs` (el backend unificat que substitueix `Benvinguda.gs`/`Enviament.gs`/`Trigger.gs` — veure `DEPLOY.md`). Es mantenen aquí per referència històrica.
+
 1. **Desplegable de "Plantilla" trencat (`#REF!`).** La validació de dades de les columnes F, J i N (llista desplegable de noms de plantilla) apunta a una referència eliminada (`#REF!`) en comptes del rang `Plantilles!A5:A12`. Ara mateix cal escriure el nom de la plantilla a mà, amb risc d'errors tipogràfics silenciosos (si el nom no coincideix exactament, l'enviament d'aquell bloc simplement no es fa, sense avís visible — només queda un `Logger.log`). **Cal recrear la validació de llista** apuntant al rang real de noms de plantilla.
 
 2. **Funcions de menú no trobades al projecte.** `onOpen()` registra al menú "Tutorial" → `obrirTutorial` i "Esborrar historial" → `esborrarHistorial`, però cap d'aquestes dues funcions apareix als fitxers `.gs` proporcionats. Si realment no existeixen al projecte d'Apps Script, en clicar aquests ítems del menú Google Sheets mostrarà l'error "Script function not found". Si teniu aquests fitxers en algun altre lloc, útil compartir-los; si no, cal crear-los o treure'ls del menú.
@@ -49,4 +51,18 @@ Un trigger diari (8:00) executa `enviament()` automàticament; `onOpen()` crea e
 
 ## 3. Resum
 
-El sistema en si és sòlid i ben pensat (execució diària automàtica, plantilles reutilitzables amb placeholders, registre d'enviaments, protecció contra reenviaments duplicats via desmarcat de casella). Els punts més importants a corregir són el **desplegable de plantilles trencat** (punt 1) i la **visibilitat dels errors d'enviament** (punt 3), ja que ambdós poden provocar que un correu no s'enviï sense que ningú se n'adoni.
+El sistema en si és sòlid i ben pensat (execució diària automàtica, plantilles reutilitzables amb placeholders, registre d'enviaments, protecció contra reenviaments duplicats via desmarcat de casella). Els punts més importants a corregir eren el **desplegable de plantilles trencat** (punt 1) i la **visibilitat dels errors d'enviament** (punt 3), ja que ambdós podien provocar que un correu no s'enviés sense que ningú se n'adonés.
+
+## 4. Com queda cada punt a `Code.gs`
+
+| # | Problema | Solució aplicada |
+|---|---|---|
+| 1 | Dropdown F/J/N trencat | `configurarFullEnviament()` reconstrueix la validació apuntant a `Plantilles!A5:A<last>` |
+| 2 | `obrirTutorial`/`esborrarHistorial` no existien | Implementades com `mostrarTutorial()` i `esborrarHistorial()` |
+| 3 | Errors silenciats, casella desmarcada igualment | Columna `Estat` a `Registre`, casella només es desmarca si l'enviament ha estat 100% correcte, correu-resum d'incidències a `TEACHER_NOTIFY_EMAIL` |
+| 4 | Plantilles llegides des de la fila 2 | `cargarPlantilles_()` llegeix des de la fila 5 |
+| 5 | Any fix "25-26" | Placeholder `{{anyAcademic}}` calculat dinàmicament, migrat automàticament un cop |
+| 6 | Dates H/L/P mai auto-omplertes | Es marca la data automàticament en enviar amb èxit |
+| 7 | Un adjunt invàlid descartava tots | Try/catch per adjunt individual; només es descarta el que falla |
+
+A més, tot aquest codi ara s'exposa també com a API web (`doGet`/`doPost`) perquè el dashboard de `docs/` hi pugui llegir i escriure dades sense passar per l'editor de Google Sheets.
