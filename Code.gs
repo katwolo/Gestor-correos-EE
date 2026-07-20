@@ -18,7 +18,7 @@
 
 // ==== CONSTANTS ====
 
-const SHEETS = { ENVIAMENT: 'Enviament', PLANTILLES: 'Plantilles', REGISTRE: 'Registre' };
+const SHEETS = { ENVIAMENT: 'Enviament', PLANTILLES: 'Plantilles', REGISTRE: 'Registre', PROGRAMATS: 'Programats' };
 
 // Índexs 0-based dins la fila A:P llegida d'"Enviament".
 const BLOCS = [
@@ -27,7 +27,7 @@ const BLOCS = [
   { casella: 12, plantilla: 13, adjunt: 14, data: 15 } // Bloc 3 "Valoració final" (M-P)
 ];
 
-const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'insertRow', 'updatePlantilla', 'updateAlumneTutor'];
+const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'insertRow', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments'];
 
 // Mapa de visualització (Plantilles!C fa servir aquest text amb majúscules/accents;
 // cargarPlantilles_ ho normalitza tot a minúscules per fer-hi coincidències).
@@ -209,7 +209,138 @@ function processarEnviaments_(ss) {
     });
   }
 
+  const problemesProgramats = processarProgramats_(ss, hoja, hojaPlantilles, hojaRegistro, plantilles);
+  problemes.push.apply(problemes, problemesProgramats);
+
   if (problemes.length) notificarProblemes_(problemes);
+}
+
+// Envia una plantilla a un alumne (assumpte/cos generats a partir dels
+// marcadors, sense overrides) i, si la plantilla coincideix amb un dels 3
+// blocs clàssics, en marca la casella/data com si s'hagués enviat des del
+// full. Compartit entre l'enviament manual des de la web i la cua de
+// "Programats".
+function enviarPlantillaPerAlumne_(hoja, hojaPlantilles, hojaRegistro, plantilles, alumneRow, dades, plantillaNom, adjuntsStr) {
+  const plantillaObj = plantilles[String(plantillaNom || '').trim().toLowerCase()];
+  if (!plantillaObj) { const e = new Error('Plantilla no trobada: ' + plantillaNom); e.code = 'NOT_FOUND'; throw e; }
+
+  const assumpte = substituirPlaceholders_(obtenirAssumpteBase_(hojaPlantilles), dades);
+  const cos = substituirPlaceholders_(plantillaObj.cos, dades);
+
+  const resultat = enviarCorreuCore_({
+    dades: dades, plantillaObj: plantillaObj, assumpte: assumpte, cos: cos,
+    adjuntsStr: adjuntsStr || '', hojaRegistro: hojaRegistro, plantillaNom: String(plantillaNom).trim()
+  });
+
+  if (resultat.errors.length === 0 && alumneRow) {
+    const blocIdx = detectarBlocPerPlantilla_(plantillaNom);
+    if (blocIdx !== -1) {
+      const bloc = BLOCS[blocIdx];
+      hoja.getRange(alumneRow, bloc.casella + 1).setValue(false);
+      hoja.getRange(alumneRow, bloc.data + 1).setValue(new Date());
+    }
+  }
+  return resultat;
+}
+
+// ==== COLA D'ENVIAMENTS PROGRAMATS ("Programats") ====
+// Permet triar diverses plantilles per a un alumne, cadascuna amb la seva
+// pròpia data. Les que ja toquen (data buida o passada) s'envien a l'instant;
+// la resta queden pendents i el trigger diari (8:00) les processa quan arriba
+// el dia. Evita dependre de triggers individuals (límit de 20 per projecte).
+
+function prepararHojaProgramats_(ss) {
+  let hoja = ss.getSheetByName(SHEETS.PROGRAMATS);
+  if (!hoja) {
+    hoja = ss.insertSheet(SHEETS.PROGRAMATS);
+    hoja.appendRow(['Fila alumne', 'Nom alumne', 'Plantilla', 'Data programada', 'Adjunts', 'Estat', 'Data creació']);
+  }
+  return hoja;
+}
+
+function processarProgramats_(ss, hoja, hojaPlantilles, hojaRegistro, plantilles) {
+  const hojaProgramats = prepararHojaProgramats_(ss);
+  const last = hojaProgramats.getLastRow();
+  const problemes = [];
+  if (last < 2) return problemes;
+
+  const files = hojaProgramats.getRange(2, 1, last - 1, 7).getValues();
+  const ara = new Date();
+
+  files.forEach(function (fila, i) {
+    const filaNum = i + 2;
+    if (fila[5] !== 'Pendent') return;
+    const dataProgramada = fila[3];
+    if (dataProgramada instanceof Date && dataProgramada > ara) return;
+
+    const alumneRow = fila[0];
+    const plantillaNom = fila[2];
+    const adjuntsStr = fila[4];
+
+    try {
+      const filaAlumne = hoja.getRange(alumneRow, 1, 1, 17).getValues()[0];
+      const dades = construirInfoAlumne_(filaAlumne);
+      const resultat = enviarPlantillaPerAlumne_(hoja, hojaPlantilles, hojaRegistro, plantilles, alumneRow, dades, plantillaNom, adjuntsStr);
+      if (resultat.errors.length === 0) {
+        hojaProgramats.getRange(filaNum, 6).setValue('Enviat');
+      } else {
+        const missatge = resultat.errors.map(function (e) { return e.error; }).join('; ');
+        hojaProgramats.getRange(filaNum, 6).setValue('Error: ' + missatge);
+        problemes.push('Programat fila ' + filaNum + ': ' + missatge);
+      }
+    } catch (err) {
+      hojaProgramats.getRange(filaNum, 6).setValue('Error: ' + err.message);
+      problemes.push('Programat fila ' + filaNum + ': ' + err.message);
+    }
+  });
+
+  return problemes;
+}
+
+// Acció web: rep diverses {plantillaNom, data} per a un mateix alumne. Les
+// que toquen ja (sense data o data <= avui) s'envien a l'instant; la resta
+// es desen a "Programats" per al trigger diari.
+function accioProgramarEnviaments_(payload, ss) {
+  const hoja = ss.getSheetByName(SHEETS.ENVIAMENT);
+  const hojaPlantilles = ss.getSheetByName(SHEETS.PLANTILLES);
+  const hojaRegistro = prepararHojaRegistro_(ss);
+  const hojaProgramats = prepararHojaProgramats_(ss);
+
+  assegurarColumnes_(hoja, 17);
+  const fila = hoja.getRange(payload.alumneRow, 1, 1, 17).getValues()[0];
+  const dades = construirInfoAlumne_(fila);
+  const plantilles = cargarPlantilles_(hojaPlantilles);
+
+  const ara = new Date();
+  const enviatsAra = [];
+  const programats = [];
+  const errors = [];
+
+  (payload.items || []).forEach(function (item) {
+    const plantillaNom = item.plantillaNom;
+    if (!plantillaNom) return;
+    const dataStr = item.data;
+    const dataObj = dataStr ? new Date(dataStr + 'T00:00:00') : null;
+
+    if (dataObj && dataObj > ara) {
+      hojaProgramats.appendRow([payload.alumneRow, dades.nomAlumne, plantillaNom, dataObj, payload.adjunts || '', 'Pendent', new Date()]);
+      programats.push({ plantillaNom: plantillaNom, data: dataStr });
+      return;
+    }
+
+    try {
+      const resultat = enviarPlantillaPerAlumne_(hoja, hojaPlantilles, hojaRegistro, plantilles, payload.alumneRow, dades, plantillaNom, payload.adjunts || '');
+      if (resultat.errors.length === 0) {
+        enviatsAra.push(plantillaNom);
+      } else {
+        resultat.errors.forEach(function (er) { errors.push({ plantillaNom: plantillaNom, error: er.error }); });
+      }
+    } catch (err) {
+      errors.push({ plantillaNom: plantillaNom, error: err.message });
+    }
+  });
+
+  return { enviatsAra: enviatsAra, programats: programats, errors: errors };
 }
 
 function notificarProblemes_(llista) {
@@ -745,6 +876,7 @@ function executarAccio_(accio, payload, ss) {
     case 'updateAlumneTutor': return actualitzarTutorAlumne_(ss, payload);
     case 'previewCorreu': return generarAssumpteICos_(ss, payload.alumneRow, payload.plantillaNom);
     case 'enviarCorreu': return accioEnviarCorreu_(payload, ss);
+    case 'programarEnviaments': return accioProgramarEnviaments_(payload, ss);
     case 'configurarFull': return { canvis: configurarFullEnviament_(ss) };
     case 'getRegistre': return obtenirRegistre_(ss, payload.limit);
     default: { const e = new Error('Acció desconeguda: ' + accio); e.code = 'UNKNOWN_ACTION'; throw e; }

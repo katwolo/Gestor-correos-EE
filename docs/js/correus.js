@@ -2,10 +2,10 @@ const Correus = (function () {
   let alumnes = [];
   let plantilles = [];
   let cercaAlumne = '';
-  let wizard = { step: 'alumne', alumneRow: null, plantillaNom: null, adjunts: '', assumpte: '', cos: '', destinataris: [] };
+  let wizard = { step: 'alumne', alumneRow: null, items: [], adjunts: '', preview: [] };
 
   const STEP_ORDER = ['alumne', 'tutor', 'plantilla', 'adjunts', 'confirmar'];
-  const STEP_LABELS = { alumne: 'Alumne/a', tutor: 'Tutor/a', plantilla: 'Plantilla', adjunts: 'Adjunts', confirmar: 'Confirmar' };
+  const STEP_LABELS = { alumne: 'Alumne/a', tutor: 'Tutor/a', plantilla: 'Plantilles', adjunts: 'Adjunts', confirmar: 'Confirmar' };
   const STEP_ICONS = { alumne: '👤', tutor: '🏢', plantilla: '📄', adjunts: '📎', confirmar: '✅' };
   const DESTINATARI_LABELS = { 'tutor/a': 'Tutor/a', alumnat: 'Alumnat', 'ambdós': 'Ambdós' };
 
@@ -57,7 +57,7 @@ const Correus = (function () {
   }
 
   function resetWizard() {
-    wizard = { step: 'alumne', alumneRow: null, plantillaNom: null, adjunts: '', assumpte: '', cos: '', destinataris: [] };
+    wizard = { step: 'alumne', alumneRow: null, items: [], adjunts: '', preview: [] };
     cercaAlumne = '';
     render();
   }
@@ -130,23 +130,32 @@ const Correus = (function () {
 
   function renderPlantillaStep() {
     const alumne = alumnes.find(function (a) { return a.row === wizard.alumneRow; });
-    const plantillaActual = plantilles.find(function (p) { return p.nom === wizard.plantillaNom; });
     return '<div class="wizard-step">' +
       '<button class="btn-link wizard-back" data-goto="tutor">← Canvia el tutor/a</button>' +
-      '<h3>Selecciona la plantilla</h3>' +
-      '<p class="hint-text">Alumne/a: <strong>' + Util.escapeHtml(alumne ? alumne.nomAlumne : '') + '</strong></p>' +
+      '<h3>Selecciona una o més plantilles</h3>' +
+      '<p class="hint-text">Alumne/a: <strong>' + Util.escapeHtml(alumne ? alumne.nomAlumne : '') + '</strong>. ' +
+      'Marca les plantilles que vulguis enviar; per a cadascuna pots triar quan (deixa la data buida per enviar-la ara mateix).</p>' +
       '<div class="wizard-list">' +
-      plantilles.map(function (p) {
-        const activa = p.nom === wizard.plantillaNom;
-        return '<div class="list-item' + (activa ? ' list-item-selected' : '') + '" data-plantilla="' + Util.escapeHtml(p.nom) + '">' +
-          '<div class="list-item-title">' + Util.escapeHtml(p.nom) + '</div>' +
-          '<span class="destinatari-badge destinatari-' + destinatariClasse(p.destinatari) + '">' + Util.escapeHtml(DESTINATARI_LABELS[p.destinatari] || p.destinatari) + '</span>' +
-          '</div>';
-      }).join('') +
+      plantilles.map(renderPlantillaItem).join('') +
       '</div>' +
-      (plantillaActual ? '<button id="w-editar-plantilla" class="btn-link">✏️ Editar aquesta plantilla</button>' : '') +
       '<div id="w-editor-plantilla"></div>' +
-      (wizard.plantillaNom ? '<button id="w-continuar-plantilla" class="btn-primary">Continuar →</button>' : '') +
+      (wizard.items.length ? '<button id="w-continuar-plantilla" class="btn-primary">Continuar →</button>' : '') +
+      '</div>';
+  }
+
+  function renderPlantillaItem(p) {
+    const item = wizard.items.find(function (it) { return it.plantillaNom === p.nom; });
+    const seleccionada = !!item;
+    return '<div class="list-item plantilla-item' + (seleccionada ? ' list-item-selected' : '') + '">' +
+      '<label class="plantilla-item-main">' +
+      '<input type="checkbox" class="plantilla-check" data-plantilla="' + Util.escapeHtml(p.nom) + '"' + (seleccionada ? ' checked' : '') + '>' +
+      '<span class="list-item-title">' + Util.escapeHtml(p.nom) + '</span>' +
+      '<span class="destinatari-badge destinatari-' + destinatariClasse(p.destinatari) + '">' + Util.escapeHtml(DESTINATARI_LABELS[p.destinatari] || p.destinatari) + '</span>' +
+      '<button type="button" class="btn-link plantilla-edit-btn" data-plantilla="' + Util.escapeHtml(p.nom) + '">✏️</button>' +
+      '</label>' +
+      (seleccionada
+        ? '<div class="plantilla-item-date"><label>Quan? </label><input type="date" class="plantilla-date" data-plantilla="' + Util.escapeHtml(p.nom) + '" value="' + Util.escapeHtml(item.data || '') + '"><span class="hint-text"> (buit = ara mateix)</span></div>'
+        : '') +
       '</div>';
   }
 
@@ -174,10 +183,10 @@ const Correus = (function () {
 
   function renderAdjuntsStep() {
     return '<div class="wizard-step">' +
-      '<button class="btn-link wizard-back" data-goto="plantilla">← Canvia de plantilla</button>' +
+      '<button class="btn-link wizard-back" data-goto="plantilla">← Canvia de plantilles</button>' +
       '<h3>Adjunts (opcional)</h3>' +
       '<div class="form-row">' +
-      '<label for="w-adjunts">Enllaços de Drive (separats per comes)</label>' +
+      '<label for="w-adjunts">Enllaços de Drive (separats per comes) — s\'adjuntaran a totes les plantilles seleccionades</label>' +
       '<input id="w-adjunts" type="text" placeholder="https://drive.google.com/..." value="' + Util.escapeHtml(wizard.adjunts) + '">' +
       '</div>' +
       '<button id="w-continuar-adjunts" class="btn-primary">Continuar →</button>' +
@@ -185,16 +194,22 @@ const Correus = (function () {
   }
 
   function renderConfirmarStep() {
-    const chips = wizard.destinataris.length
-      ? wizard.destinataris.map(function (d) { return '<span class="chip">' + Util.escapeHtml(d) + '</span>'; }).join('')
-      : '<span class="chip chip-warning">cap destinatari vàlid</span>';
+    const files = wizard.preview.map(function (p) {
+      const chips = p.destinataris.length
+        ? p.destinataris.map(function (d) { return '<span class="chip">' + Util.escapeHtml(d) + '</span>'; }).join('')
+        : '<span class="chip chip-warning">cap destinatari vàlid</span>';
+      const quan = p.data ? ('📅 ' + p.data) : '⚡ Ara mateix';
+      return '<div class="confirmar-item">' +
+        '<div class="confirmar-item-header"><strong>' + Util.escapeHtml(p.plantillaNom) + '</strong><span class="hint-text">' + quan + '</span></div>' +
+        '<div class="chip-row">' + chips + '</div>' +
+        '</div>';
+    }).join('');
+
     return '<div class="wizard-step">' +
       '<button class="btn-link wizard-back" data-goto="adjunts">← Canvia adjunts</button>' +
       '<h3>Confirma i envia</h3>' +
-      '<div class="form-row"><label>Es enviarà a</label><div class="chip-row">' + chips + '</div></div>' +
-      '<div class="form-row"><label>Assumpte</label><div class="preview-box">' + Util.escapeHtml(wizard.assumpte) + '</div></div>' +
-      '<div class="form-row"><label>Cos del correu</label><div id="w-cos" class="cos-editable" contenteditable="true">' + wizard.cos + '</div></div>' +
-      '<button id="w-enviar" class="btn-primary">Enviar correu</button> ' +
+      files +
+      '<button id="w-enviar" class="btn-primary">Confirma els enviaments</button> ' +
       '<button id="w-cancelar" class="btn-link">Cancel·la i torna a l\'inici</button>' +
       '<p id="w-resultat" class="hint-text"></p>' +
       '</div>';
@@ -233,14 +248,18 @@ const Correus = (function () {
     }
 
     if (wizard.step === 'plantilla') {
-      document.querySelectorAll('#correus-wizard .wizard-list .list-item').forEach(function (el) {
-        el.addEventListener('click', function () {
-          wizard.plantillaNom = el.dataset.plantilla;
-          render();
+      document.querySelectorAll('.plantilla-check').forEach(function (el) {
+        el.addEventListener('change', function () { onTogglePlantilla(el.dataset.plantilla, el.checked); });
+      });
+      document.querySelectorAll('.plantilla-date').forEach(function (el) {
+        el.addEventListener('change', function () { onCanviarDataPlantilla(el.dataset.plantilla, el.value); });
+      });
+      document.querySelectorAll('.plantilla-edit-btn').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          onEditarPlantilla(el.dataset.plantilla);
         });
       });
-      const editarBtn = document.getElementById('w-editar-plantilla');
-      if (editarBtn) editarBtn.addEventListener('click', onEditarPlantilla);
       const continuarBtn = document.getElementById('w-continuar-plantilla');
       if (continuarBtn) continuarBtn.addEventListener('click', function () { wizard.step = 'adjunts'; render(); });
     }
@@ -253,6 +272,22 @@ const Correus = (function () {
       document.getElementById('w-enviar').addEventListener('click', onEnviar);
       document.getElementById('w-cancelar').addEventListener('click', resetWizard);
     }
+  }
+
+  function onTogglePlantilla(nom, marcada) {
+    if (marcada) {
+      if (!wizard.items.some(function (it) { return it.plantillaNom === nom; })) {
+        wizard.items.push({ plantillaNom: nom, data: '' });
+      }
+    } else {
+      wizard.items = wizard.items.filter(function (it) { return it.plantillaNom !== nom; });
+    }
+    render();
+  }
+
+  function onCanviarDataPlantilla(nom, data) {
+    const item = wizard.items.find(function (it) { return it.plantillaNom === nom; });
+    if (item) item.data = data;
   }
 
   async function onDesarTutor() {
@@ -273,8 +308,8 @@ const Correus = (function () {
     }
   }
 
-  function onEditarPlantilla() {
-    const p = plantilles.find(function (pl) { return pl.nom === wizard.plantillaNom; });
+  function onEditarPlantilla(nom) {
+    const p = plantilles.find(function (pl) { return pl.nom === nom; });
     if (!p) return;
     const wrap = document.getElementById('w-editor-plantilla');
     wrap.innerHTML = renderEditorPlantilla(p);
@@ -299,12 +334,14 @@ const Correus = (function () {
   async function onContinuarAdjunts() {
     wizard.adjunts = document.getElementById('w-adjunts').value.trim();
     try {
-      const data = await Api.call('previewCorreu', {
-        sheetId: State.getSheetIdCorreus(), alumneRow: wizard.alumneRow, plantillaNom: wizard.plantillaNom
-      });
-      wizard.assumpte = data.assumpte;
-      wizard.cos = data.cos;
-      wizard.destinataris = data.destinataris || [];
+      const previews = await Promise.all(wizard.items.map(function (item) {
+        return Api.call('previewCorreu', {
+          sheetId: State.getSheetIdCorreus(), alumneRow: wizard.alumneRow, plantillaNom: item.plantillaNom
+        }).then(function (data) {
+          return { plantillaNom: item.plantillaNom, data: item.data, destinataris: data.destinataris || [] };
+        });
+      }));
+      wizard.preview = previews;
       wizard.step = 'confirmar';
       render();
     } catch (err) {
@@ -313,28 +350,29 @@ const Correus = (function () {
   }
 
   async function onEnviar() {
-    const cos = document.getElementById('w-cos').innerHTML;
     const resultatEl = document.getElementById('w-resultat');
-    if (!confirm('Segur que vols enviar aquest correu?')) return;
+    if (!confirm('Segur que vols confirmar aquests enviaments (' + wizard.items.length + ')?')) return;
 
     const btn = document.getElementById('w-enviar');
     btn.disabled = true;
-    resultatEl.textContent = 'Enviant...';
+    resultatEl.textContent = 'Processant...';
 
     try {
-      const data = await Api.call('enviarCorreu', {
+      const data = await Api.call('programarEnviaments', {
         sheetId: State.getSheetIdCorreus(),
-        alumneRow: wizard.alumneRow, plantillaNom: wizard.plantillaNom,
-        assumpte: wizard.assumpte, cos: cos, adjunts: wizard.adjunts
+        alumneRow: wizard.alumneRow,
+        items: wizard.items,
+        adjunts: wizard.adjunts
       });
-      const enviatsTxt = data.enviats.length ? 'Enviat a: ' + data.enviats.join(', ') : 'Cap enviament realitzat.';
-      const errorsTxt = data.errors.length ? ' | Errors: ' + data.errors.map(function (e) { return e.destinatari + ' (' + e.error + ')'; }).join(', ') : '';
-      const avisosTxt = data.avisos.length ? ' | Avisos: ' + data.avisos.join(', ') : '';
-      resultatEl.textContent = enviatsTxt + errorsTxt + avisosTxt;
-      Util.showToast(data.errors.length ? 'Enviat amb errors' : 'Correu enviat', data.errors.length ? 'error' : undefined);
+      const parts = [];
+      if (data.enviatsAra.length) parts.push('Enviats ara: ' + data.enviatsAra.join(', '));
+      if (data.programats.length) parts.push('Programats: ' + data.programats.map(function (p) { return p.plantillaNom + ' (' + p.data + ')'; }).join(', '));
+      if (data.errors.length) parts.push('Errors: ' + data.errors.map(function (e) { return e.plantillaNom + ' (' + e.error + ')'; }).join(', '));
+      resultatEl.textContent = parts.join(' | ') || 'Cap acció realitzada.';
+      Util.showToast(data.errors.length ? 'Fet amb errors' : 'Enviaments confirmats', data.errors.length ? 'error' : undefined);
     } catch (err) {
       resultatEl.textContent = 'Error: ' + err.message;
-      Util.showToast('No s\'ha pogut enviar: ' + err.message, 'error');
+      Util.showToast('No s\'han pogut confirmar els enviaments: ' + err.message, 'error');
     } finally {
       btn.disabled = false;
     }
