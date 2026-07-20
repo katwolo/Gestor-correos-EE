@@ -1,23 +1,12 @@
 const Excel = (function () {
-  let activeTab = 'Enviament';
-
   function init() {
     document.getElementById('sheet-link-save').addEventListener('click', onSaveLink);
-    document.getElementById('configurar-full-btn').addEventListener('click', onConfigurar);
-    document.querySelectorAll('.tab-btn[data-tab]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        document.querySelectorAll('.tab-btn[data-tab]').forEach(function (b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        activeTab = btn.dataset.tab;
-        loadActiveTab();
-      });
-    });
 
     const input = document.getElementById('sheet-link-input');
-    const existing = State.getSheetId();
+    const existing = State.getSheetIdOficial();
     if (existing) input.value = 'https://docs.google.com/spreadsheets/d/' + existing;
 
-    State.on('sheetId', function () { refreshGate(); });
+    State.on('sheetIdOficial', function () { refreshGate(); });
     refreshGate();
   }
 
@@ -29,34 +18,22 @@ const Excel = (function () {
       status.textContent = 'No s\'ha reconegut cap ID de Google Sheets en aquest enllaç.';
       return;
     }
-    State.setSheetId(id);
+    State.setSheetIdOficial(id);
     status.textContent = 'Enllaç desat.';
     refreshGate();
   }
 
   function refreshGate() {
-    const has = !!State.getSheetId();
+    const has = !!State.getSheetIdOficial();
     document.getElementById('excel-no-sheet').classList.toggle('hidden', has);
     document.getElementById('excel-grid-wrap').classList.toggle('hidden', !has);
     if (has) loadActiveTab();
   }
 
-  async function onConfigurar() {
-    if (!State.getSheetId()) return;
-    if (!confirm('Això prepara el full "Enviament" (columnes Q-U, desplegable de plantilles) i "Registre". Es pot executar diverses vegades sense problema. Continuar?')) return;
-    try {
-      const data = await Api.call('configurarFull', {});
-      Util.showToast('Full configurat: ' + data.canvis.length + ' canvi(s) aplicat(s).');
-      loadActiveTab();
-    } catch (err) {
-      Util.showToast('No s\'ha pogut configurar: ' + err.message, 'error');
-    }
-  }
-
   async function loadActiveTab() {
-    if (!State.getSheetId()) return;
+    if (!State.getSheetIdOficial()) return;
     try {
-      const data = await Api.call('getSheetData', { sheetName: activeTab });
+      const data = await Api.call('getSheetData', { sheetId: State.getSheetIdOficial() });
       renderGrid(data);
     } catch (err) {
       Util.showToast('Excel oficial: ' + err.message, 'error');
@@ -68,44 +45,36 @@ const Excel = (function () {
     const theadCells = data.headers.map(function (h) { return '<th>' + Util.escapeHtml(h) + '</th>'; }).join('');
     const bodyRows = data.rows.map(function (rowObj) {
       const cells = rowObj.values.map(function (value, colIdx) {
-        return renderCell(value, rowObj.row, colIdx, data.columnTypes[colIdx] || 'text', data.editable);
+        return renderCell(value, rowObj.row, colIdx, data.columnTypes[colIdx] || { tipus: 'text' });
       }).join('');
       return '<tr>' + cells + '</tr>';
     }).join('');
 
     table.innerHTML = '<thead><tr>' + theadCells + '</tr></thead><tbody>' + bodyRows + '</tbody>';
-
-    if (data.editable) wireCellEvents(table);
+    wireCellEvents(table);
   }
 
-  function renderCell(value, row, colIdx, tipus, editable) {
+  function renderCell(value, row, colIdx, columnType) {
     const attrs = 'data-row="' + row + '" data-col="' + (colIdx + 1) + '"';
-    if (!editable) {
-      const text = tipus === 'checkbox' ? (value ? '✅' : '') : Util.escapeHtml(value);
-      return '<td>' + text + '</td>';
+    if (columnType.tipus === 'select' && columnType.opcions) {
+      const options = ['<option value=""></option>'].concat(columnType.opcions.map(function (opt) {
+        return '<option value="' + Util.escapeHtml(opt) + '"' + (opt === value ? ' selected' : '') + '>' + Util.escapeHtml(opt) + '</option>';
+      })).join('');
+      return '<td><select ' + attrs + '>' + options + '</select></td>';
     }
-    if (tipus === 'checkbox') {
-      return '<td><input type="checkbox" ' + attrs + ' ' + (value ? 'checked' : '') + '></td>';
-    }
-    if (tipus === 'data') {
+    if (columnType.tipus === 'data') {
       const dateVal = value ? String(value).slice(0, 10) : '';
       return '<td><input type="date" ' + attrs + ' value="' + dateVal + '"></td>';
-    }
-    if (tipus === 'html') {
-      return '<td><textarea rows="3" ' + attrs + '>' + Util.escapeHtml(value) + '</textarea></td>';
     }
     return '<td contenteditable="true" ' + attrs + '>' + Util.escapeHtml(value) + '</td>';
   }
 
   function wireCellEvents(table) {
-    table.querySelectorAll('input[type="checkbox"]').forEach(function (el) {
-      el.addEventListener('change', function () { saveCell(el, el.checked); });
+    table.querySelectorAll('select').forEach(function (el) {
+      el.addEventListener('change', function () { saveCell(el, el.value); });
     });
     table.querySelectorAll('input[type="date"]').forEach(function (el) {
       el.addEventListener('change', function () { saveCell(el, el.value); });
-    });
-    table.querySelectorAll('textarea').forEach(function (el) {
-      el.addEventListener('blur', function () { saveCell(el, el.value); });
     });
     table.querySelectorAll('td[contenteditable="true"]').forEach(function (el) {
       el.addEventListener('blur', function () { saveCell(el, el.textContent); });
@@ -117,7 +86,7 @@ const Excel = (function () {
     const col = Number(el.dataset.col);
     const cell = el.tagName === 'TD' ? el : el.closest('td');
     try {
-      await Api.call('updateCell', { sheetName: activeTab, row: row, col: col, value: value });
+      await Api.call('updateCell', { sheetId: State.getSheetIdOficial(), row: row, col: col, value: value });
       flashCell(cell, 'saved');
     } catch (err) {
       flashCell(cell, 'save-error');

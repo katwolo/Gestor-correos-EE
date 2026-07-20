@@ -68,12 +68,6 @@
       <div id="excel-no-sheet" class="notice hidden">Enganxa i desa l'enllaç del Sheet per veure'n les dades.</div>
 
       <div id="excel-grid-wrap" class="hidden">
-        <div class="tabs">
-          <button class="tab-btn active" data-tab="Enviament">Enviament</button>
-          <button class="tab-btn" data-tab="Plantilles">Plantilles</button>
-          <button class="tab-btn" data-tab="Registre">Registre</button>
-          <button id="configurar-full-btn" class="tab-btn" title="Prepara aquest full (columnes Q-U, desplegable de plantilles) — necessari un cop per full nou">⚙️ Configurar aquest full</button>
-        </div>
         <div class="table-scroll">
           <table id="excel-table" class="excel-table"></table>
         </div>
@@ -81,7 +75,17 @@
     </section>
 
     <section id="section-correus" class="app-section">
-      <div id="correus-no-sheet" class="notice hidden">Configura primer l'enllaç del Sheet a "Excel oficial".</div>
+      <div class="sheet-link-box">
+        <label for="correus-sheet-link-input">Enllaç del Google Sheets d'enviament de correus</label>
+        <div class="sheet-link-row">
+          <input id="correus-sheet-link-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/...">
+          <button id="correus-sheet-link-save" class="btn-primary">Desa</button>
+        </div>
+        <p id="correus-sheet-link-status" class="hint-text"></p>
+        <button id="configurar-full-btn" class="tab-btn" title="Prepara aquest full (capçaleres, caselles, plantilles d'exemple) — necessari un cop per full nou">⚙️ Configurar aquest full</button>
+      </div>
+
+      <div id="correus-no-sheet" class="notice hidden">Enganxa i desa l'enllaç del Sheet d'enviament de correus.</div>
 
       <div id="correus-form" class="correus-form hidden">
         <div class="form-row">

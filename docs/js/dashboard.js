@@ -3,10 +3,13 @@ const Dashboard = (function () {
     actius: 'Actius',
     finalitzats: 'Finalitzats',
     pendentsDocumentacio: 'Pendents de documentació',
-    senseTutorEmail: 'Sense correu de tutor/a',
-    senseContacte: 'Sense cap contacte encara',
-    correusSetmanaOk: 'Correus enviats (7 dies)',
-    correusSetmanaError: 'Errors d\'enviament (7 dies)'
+    total: 'Total alumnat'
+  };
+
+  const ESTAT_LABELS = {
+    finalitzat: 'Finalitzat',
+    actiu: 'Actiu',
+    inactiu: 'Sense pràctiques'
   };
 
   async function load() {
@@ -14,7 +17,7 @@ const Dashboard = (function () {
     const tiles = document.getElementById('dashboard-tiles');
     const students = document.getElementById('dashboard-students');
 
-    if (!State.getSheetId()) {
+    if (!State.getSheetIdOficial()) {
       wrap.classList.remove('hidden');
       tiles.innerHTML = '';
       students.innerHTML = '';
@@ -23,9 +26,9 @@ const Dashboard = (function () {
     wrap.classList.add('hidden');
 
     try {
-      const data = await Api.call('getDashboard', {});
+      const data = await Api.call('getDashboard', { sheetId: State.getSheetIdOficial() });
       renderTiles(tiles, data.tiles);
-      renderStudents(students, data.alumnes, data.faseLabels);
+      renderStudents(students, data.alumnes);
     } catch (err) {
       Util.showToast('Dashboard: ' + err.message, 'error');
     }
@@ -39,21 +42,22 @@ const Dashboard = (function () {
     }).join('');
   }
 
-  function renderStudents(container, alumnes, faseLabels) {
+  function renderStudents(container, alumnes) {
     if (!alumnes.length) {
-      container.innerHTML = '<p class="hint-text">Encara no hi ha alumnes al full "Enviament".</p>';
+      container.innerHTML = '<p class="hint-text">Encara no hi ha alumnes al full oficial.</p>';
       return;
     }
     container.innerHTML = alumnes.map(function (a) {
-      const dots = a.completades.map(function (done, i) {
-        const isCurrent = !a.finalitzat && !done && a.completades.slice(0, i).every(Boolean);
-        const cls = done ? 'done' : (isCurrent ? 'current' : '');
-        return '<span class="fase-dot ' + cls + '" title="' + Util.escapeHtml(faseLabels[i]) + '"></span>';
-      }).join('');
+      const estatKey = a.finalitzat ? 'finalitzat' : (a.actiu ? 'actiu' : 'inactiu');
+      const badgeClass = a.finalitzat ? 'done' : (a.faltaDocument ? '' : 'current');
       return '<div class="student-card">' +
-        '<div class="student-name">' + Util.escapeHtml(a.nomAlumne) + '</div>' +
-        '<div class="student-fase">' + Util.escapeHtml(a.etiqueta) + '</div>' +
-        '<div class="fase-track">' + dots + '</div>' +
+        '<div class="student-name">' + Util.escapeHtml(a.nom) + '</div>' +
+        '<div class="student-fase">' + Util.escapeHtml(a.empresa || 'Sense empresa assignada') + '</div>' +
+        '<div class="fase-track">' +
+        '<span class="fase-dot ' + badgeClass + '" title="' + Util.escapeHtml(ESTAT_LABELS[estatKey]) + '"></span>' +
+        '</div>' +
+        '<div class="hint-text">' + Util.escapeHtml(ESTAT_LABELS[estatKey]) +
+        (a.faltaDocument && !a.finalitzat ? ' · falta documentació' : '') + '</div>' +
         '</div>';
     }).join('');
   }

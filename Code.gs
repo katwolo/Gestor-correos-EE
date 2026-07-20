@@ -2,8 +2,17 @@
  * Gestor de correus EE — backend unificat.
  * Substitueix Benvinguda.gs, Enviament.gs i Trigger.gs.
  *
+ * Fa servir DOS Google Sheets diferents, cadascun amb el seu propi sheetId
+ * enviat des del frontend:
+ *  - "Excel oficial" (Dashboard): el full de seguiment real de l'alumnat
+ *    (una sola pestanya vàlida, la primera — la resta, com INSTRUCCIONS,
+ *    EMPRESES, etc., s'ignoren). Estructura definida a ROSTER_COLUMNS.
+ *  - "Enviar correus": el full "Enviament"/"Plantilles"/"Registre" per
+ *    disparar correus amb plantilles (trigger diari + enviament manual).
+ *
  * Conté dos camins d'execució que comparteixen la mateixa lògica d'enviament:
- *  - El trigger diari / menú del propi Google Sheet (onOpen, enviament).
+ *  - El trigger diari / menú del propi Google Sheet (onOpen, enviament) — actua
+ *    sobre el full "Enviar correus" al qual estigui lligat el projecte.
  *  - L'API web (doGet/doPost) que fa servir la web externa (GitHub Pages) via fetch.
  */
 
@@ -11,39 +20,14 @@
 
 const SHEETS = { ENVIAMENT: 'Enviament', PLANTILLES: 'Plantilles', REGISTRE: 'Registre' };
 
-// Índexs 0-based dins la fila A:U llegida d'"Enviament".
+// Índexs 0-based dins la fila A:P llegida d'"Enviament".
 const BLOCS = [
   { casella: 4, plantilla: 5, adjunt: 6, data: 7 },    // Bloc 1 "Contacte inicial" (E-H)
   { casella: 8, plantilla: 9, adjunt: 10, data: 11 },  // Bloc 2 "Seguiment" (I-L)
   { casella: 12, plantilla: 13, adjunt: 14, data: 15 } // Bloc 3 "Valoració final" (M-P)
 ];
 
-// Les 8 fases del procés, en ordre. "bool" = checkbox Q-U; "data" = columna de data H/L/P.
-const FASES_DEFS = [
-  { idx: 16, tipus: 'bool', etiqueta: "Sol·licitud de dades rebuda" },
-  { idx: 17, tipus: 'bool', etiqueta: "Creació REF05/REF06" },
-  { idx: 18, tipus: 'bool', etiqueta: "Devolució firmada" },
-  { idx: 7, tipus: 'data', etiqueta: "Contacte inicial fet" },
-  { idx: 11, tipus: 'data', etiqueta: "Seguiment fet" },
-  { idx: 15, tipus: 'data', etiqueta: "Valoració final feta" },
-  { idx: 19, tipus: 'bool', etiqueta: "Conveni tancat" },
-  { idx: 20, tipus: 'bool', etiqueta: "Quadern complet tancat" }
-];
-
-const WHITELISTED_SHEETS = ['Enviament', 'Plantilles']; // Registre és només lectura des de la web
 const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull'];
-
-const TIPUS_COLUMNES = {
-  Enviament: (function () {
-    const t = {};
-    for (let c = 0; c < 21; c++) t[c] = 'text';
-    [4, 8, 12, 16, 17, 18, 19, 20].forEach(function (c) { t[c] = 'checkbox'; });
-    [7, 11, 15].forEach(function (c) { t[c] = 'data'; });
-    return t;
-  })(),
-  Plantilles: { 0: 'text', 1: 'html', 2: 'text' },
-  Registre: { 0: 'data', 1: 'text', 2: 'text', 3: 'text', 4: 'text', 5: 'text' }
-};
 
 // ==== MENÚ / ONOPEN (full lligat) ====
 
@@ -57,7 +41,7 @@ function onOpen() {
     .addItem('Tutorial', 'mostrarTutorial')
     .addItem('Esborrar historial', 'esborrarHistorial')
     .addSeparator()
-    .addItem('Configuració inicial (columnes Q-U)', 'configurarFullEnviament')
+    .addItem('Configuració inicial', 'configurarFullEnviament')
     .addItem("Copiar URL de l'aplicació web", 'mostrarUrlAplicacio')
     .addToUi();
 
@@ -138,7 +122,7 @@ function enviament() {
   processarEnviaments_(SpreadsheetApp.getActiveSpreadsheet());
 }
 
-// El full "Enviament" pot no tenir encara físicament columnes fins la U (p.ex.
+// El full "Enviament" pot no tenir encara físicament columnes fins la P (p.ex.
 // abans d'executar configurarFullEnviament per primer cop): les operacions de
 // lectura/escriptura amb getRange fallarien ("exceeds grid limits") si el full
 // és més petit del que esperem. Aquesta funció l'eixampla si cal.
@@ -149,7 +133,7 @@ function assegurarColumnes_(hoja, num) {
 
 function processarEnviaments_(ss) {
   const hoja = ss.getSheetByName(SHEETS.ENVIAMENT);
-  assegurarColumnes_(hoja, 21);
+  assegurarColumnes_(hoja, 16);
   const hojaPlantilles = ss.getSheetByName(SHEETS.PLANTILLES);
   const hojaRegistro = prepararHojaRegistro_(ss);
   const assumpteBase = obtenirAssumpteBase_(hojaPlantilles);
@@ -157,7 +141,7 @@ function processarEnviaments_(ss) {
 
   const last = hoja.getLastRow();
   if (last < 2) return;
-  const dades = hoja.getRange(2, 1, last - 1, 21).getValues();
+  const dades = hoja.getRange(2, 1, last - 1, 16).getValues();
   const ara = new Date();
   const problemes = [];
 
@@ -350,81 +334,7 @@ function extraerIdDeDrive_(url) {
   return match ? match[0] : null;
 }
 
-// ==== FASES DEL PROCÉS / DASHBOARD ====
-
-function calcularFaseAlumne_(row) {
-  const completades = FASES_DEFS.map(function (f) {
-    const v = row[f.idx];
-    return f.tipus === 'data' ? !!v : v === true;
-  });
-  const primeraPendent = completades.indexOf(false);
-  const finalitzat = primeraPendent === -1;
-  return {
-    faseActual: finalitzat ? 8 : primeraPendent + 1,
-    etiqueta: finalitzat ? 'Finalitzat' : FASES_DEFS[primeraPendent].etiqueta,
-    finalitzat: finalitzat,
-    completades: completades
-  };
-}
-
-function obtenirDashboard_(ss) {
-  const hoja = ss.getSheetByName(SHEETS.ENVIAMENT);
-  assegurarColumnes_(hoja, 21);
-  const last = hoja.getLastRow();
-  const files = last > 1 ? hoja.getRange(2, 1, last - 1, 21).getValues() : [];
-
-  const alumnes = [];
-  let actius = 0, finalitzats = 0, pendentsDocumentacio = 0, senseTutorEmail = 0, senseContacte = 0;
-
-  files.forEach(function (row, i) {
-    if (!row[0]) return;
-    const fase = calcularFaseAlumne_(row);
-    if (fase.finalitzat) finalitzats++; else actius++;
-    if (!fase.finalitzat && fase.faseActual <= 3) pendentsDocumentacio++;
-    if (!fase.finalitzat && !row[3]) senseTutorEmail++;
-    if (!fase.finalitzat && !fase.completades[3] && !fase.completades[4] && !fase.completades[5]) senseContacte++;
-    alumnes.push({
-      row: i + 2,
-      nomAlumne: row[0], correuAlumne: row[1], nomTutor: row[2], correuTutor: row[3],
-      faseActual: fase.faseActual, etiqueta: fase.etiqueta, finalitzat: fase.finalitzat, completades: fase.completades
-    });
-  });
-
-  const registre = obtenirEstadistiquesRegistre_(ss);
-
-  return {
-    tiles: {
-      actius: actius,
-      finalitzats: finalitzats,
-      pendentsDocumentacio: pendentsDocumentacio,
-      senseTutorEmail: senseTutorEmail,
-      senseContacte: senseContacte,
-      correusSetmanaOk: registre.ok,
-      correusSetmanaError: registre.error
-    },
-    alumnes: alumnes,
-    faseLabels: FASES_DEFS.map(function (f) { return f.etiqueta; })
-  };
-}
-
-function obtenirEstadistiquesRegistre_(ss) {
-  const hoja = ss.getSheetByName(SHEETS.REGISTRE);
-  if (!hoja) return { ok: 0, error: 0 };
-  const last = hoja.getLastRow();
-  if (last < 2) return { ok: 0, error: 0 };
-  const dades = hoja.getRange(2, 1, last - 1, 6).getValues();
-  const fa7dies = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  let ok = 0, error = 0;
-  dades.forEach(function (fila) {
-    const data = fila[0];
-    if (!(data instanceof Date) || data < fa7dies) return;
-    const estat = String(fila[5] || 'OK');
-    if (estat.indexOf('ERROR') === 0) error++; else ok++;
-  });
-  return { ok: ok, error: error };
-}
-
-// ==== CONFIGURACIÓ / MIGRACIÓ (columnes Q-U, dropdown, any acadèmic) ====
+// ==== CONFIGURACIÓ / MIGRACIÓ del full "Enviar correus" (dropdown, any acadèmic) ====
 
 function configurarFullEnviament() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -472,7 +382,7 @@ function configurarFullEnviament_(ss) {
   const canvis = [];
 
   const hoja = obtenirOCrearFull_(ss, SHEETS.ENVIAMENT);
-  assegurarColumnes_(hoja, 21);
+  assegurarColumnes_(hoja, 16);
 
   CAPÇALERES_BASE_ENVIAMENT.forEach(function (parell) {
     const cel = hoja.getRange(1, parell[0]);
@@ -501,26 +411,11 @@ function configurarFullEnviament_(ss) {
   hojaPlantilles.getRange(5, 3, Math.max(1, hojaPlantilles.getLastRow() - 4), 1).setDataValidation(validacioDestinatari);
 
   const last = hoja.getLastRow();
-  if (last >= 1) {
-    const capçaleresNoves = [
-      [17, "Sol·licitud de dades"], [18, 'REF05/REF06'], [19, 'Devolució firmada'],
-      [20, 'Conveni tancat'], [21, 'Quadern complet']
-    ];
-    capçaleresNoves.forEach(function (parell) {
-      const cel = hoja.getRange(1, parell[0]);
-      if (!cel.getValue()) {
-        cel.setValue(parell[1]);
-        canvis.push('Capçalera "' + parell[1] + '" afegida.');
-      }
-    });
-
-    if (last > 1) {
-      hoja.getRange(2, 17, last - 1, 5).insertCheckboxes();
-      hoja.getRange(2, 5, last - 1, 1).insertCheckboxes();
-      hoja.getRange(2, 9, last - 1, 1).insertCheckboxes();
-      hoja.getRange(2, 13, last - 1, 1).insertCheckboxes();
-      canvis.push('Caselles de tots els blocs (E, I, M, Q:U) activades per a ' + (last - 1) + ' files.');
-    }
+  if (last > 1) {
+    hoja.getRange(2, 5, last - 1, 1).insertCheckboxes();
+    hoja.getRange(2, 9, last - 1, 1).insertCheckboxes();
+    hoja.getRange(2, 13, last - 1, 1).insertCheckboxes();
+    canvis.push('Caselles dels 3 blocs (E, I, M) activades per a ' + (last - 1) + ' files.');
   }
 
   const canviValidacio = refrescarValidacioPlantilles_(ss);
@@ -559,6 +454,159 @@ function migrarAnyAcademic_(hojaPlantilles) {
   if (!match) return null;
   cel.setValue(valor.replace(match[0], '{{anyAcademic}}'));
   return "Assumpte migrat a l'any acadèmic dinàmic ({{anyAcademic}}).";
+}
+
+// ==== FULL "EXCEL OFICIAL" (roster real de seguiment de l'alumnat) ====
+//
+// Sempre és la PRIMERA pestanya del spreadsheet, sigui quin sigui el seu nom
+// (canvia cada curs, p.ex. "2n EAS A 24-25"). Capçaleres a la fila 2, dades
+// a partir de la fila 3. Alguns alumnes ocupen diverses files consecutives
+// (un conveni/acord per fila): la primera fila del grup porta el nom i el
+// mail; les següents (nom en blanc) són convenis addicionals del mateix
+// alumne — per al dashboard es fa servir sempre la ÚLTIMA fila del grup.
+
+const ROSTER_COLUMNS = [
+  { header: "Nom i cognoms de l'alumne/a", tipus: 'text' },
+  { header: "Mail de l'alumne/a", tipus: 'text' },
+  { header: 'Ha començat pràctiques', tipus: 'select', opcions: ['SI', 'NO'] },
+  { header: 'Fa dual?', tipus: 'select', opcions: ['SI', 'NO'] },
+  { header: 'Delictes sexuals', tipus: 'select', opcions: ['SI', 'NO', 'NO CAL'] },
+  { header: 'NIF empresa', tipus: 'text' },
+  { header: "Nom de l'empresa", tipus: 'text' },
+  { header: 'R02', tipus: 'select', opcions: ['SI', 'NO'] },
+  { header: 'R03', tipus: 'select', opcions: ['SI', 'NO'] },
+  { header: 'Número acord', tipus: 'text' },
+  { header: 'Data inici', tipus: 'data' },
+  { header: 'Data final', tipus: 'data' },
+  { header: 'Acord (ref05) i pla activitats (ref06)', tipus: 'select', opcions: ['Falta', 'Entregat', 'Rebut de coord FCT', 'Enviat alumne/empresa'] },
+  { header: 'Renúncia', tipus: 'select', opcions: ['FCT', 'Signat', 'Enviat a coordinació FCT'] },
+  { header: 'Exempció (%)', tipus: 'select', opcions: ['No aplica', 'Sol.licitud enviada', '25%', '50%', '100%', 'Negativa'] },
+  { header: "Contactes amb l'empresa", tipus: 'select', opcions: ['No he fet', 'Inicial', 'Seguiment', 'Valoració'] },
+  { header: 'Seguiment alumne/a', tipus: 'select', opcions: ['Inici', 'Seguiment', 'Final'] },
+  { header: 'Agenda SBID (1r T)', tipus: 'select', opcions: ['No fet', 'En procés', 'Fet'] },
+  { header: 'Agenda SBID (2n T)', tipus: 'select', opcions: ['No fet', 'En procés', 'Fet'] },
+  { header: 'Agenda SBID (3r T)', tipus: 'select', opcions: ['No fet', 'En procés', 'Fet'] },
+  { header: 'R22 (Quadern FCT)', tipus: 'select', opcions: ['No esta fet', 'Falta signar alumne/a i tutors/es', 'Enviat a coordinació FCT', 'Rebut definitiu', 'Enviat definitiu'] },
+  { header: 'Nota final', tipus: 'select', opcions: ['MOLT BONA', 'BONA', 'SUFICIENT', 'NO APTE'] },
+  { header: 'Nota numèrica', tipus: 'text' },
+  { header: 'Notes posades esfera', tipus: 'select', opcions: ['SI'] },
+  { header: 'Erasmus+', tipus: 'select', opcions: ['SI'] },
+  { header: 'Excel inserció laboral', tipus: 'select', opcions: ['Fet'] },
+  { header: 'Enquesta inserció laboral', tipus: 'select', opcions: ['Fet'] },
+  { header: 'Observacions', tipus: 'text' },
+  { header: 'Mail tutor/a empresa', tipus: 'text' },
+  { header: 'Mòbil tutor/a empresa', tipus: 'text' }
+];
+// Índexs 0-based per llegibilitat al codi de sota.
+const ROSTER_IDX = { NOM: 0, MAIL: 1, PRACTIQUES: 2, ACORD: 12, QUADERN: 20, NOTA_FINAL: 21 };
+
+function obtenirFullRoster_(ss) {
+  const fulls = ss.getSheets();
+  if (!fulls.length) { const e = new Error('El full oficial no té cap pestanya'); e.code = 'NOT_FOUND'; throw e; }
+  return fulls[0];
+}
+
+function obtenirDadesRoster_(ss) {
+  const hoja = obtenirFullRoster_(ss);
+  const last = hoja.getLastRow();
+  const numCols = ROSTER_COLUMNS.length;
+  const headers = last >= 2 ? hoja.getRange(2, 1, 1, numCols).getValues()[0] : ROSTER_COLUMNS.map(function (c) { return c.header; });
+  const numFilesDades = Math.max(0, last - 2);
+  const rows = numFilesDades > 0
+    ? hoja.getRange(3, 1, numFilesDades, numCols).getValues().map(function (fila, i) {
+      return { row: i + 3, values: fila };
+    })
+    : [];
+  return {
+    headers: headers,
+    rows: rows,
+    columnTypes: ROSTER_COLUMNS.map(function (c) { return { tipus: c.tipus, opcions: c.opcions || null }; })
+  };
+}
+
+function actualitzarCellaRoster_(ss, payload) {
+  const hoja = obtenirFullRoster_(ss);
+  const definicio = ROSTER_COLUMNS[payload.col - 1];
+  let valor = payload.value;
+  if (definicio && definicio.tipus === 'data') valor = valor ? new Date(valor) : '';
+  hoja.getRange(payload.row, payload.col).setValue(valor);
+  return { row: payload.row, col: payload.col, value: valor };
+}
+
+// Agrupa files consecutives del mateix alumne (nom en blanc = mateix conveni/grup);
+// cada grup fa servir la ÚLTIMA fila amb contingut com a "estat" actual.
+function agruparAlumnesRoster_(files, primeraFilaNum) {
+  const grups = [];
+  let grupActual = null;
+
+  files.forEach(function (row, i) {
+    const filaNum = primeraFilaNum + i;
+    const teContingut = row.some(function (v) { return v !== '' && v !== null; });
+    if (row[ROSTER_IDX.NOM]) {
+      grupActual = { primeraFila: filaNum, ultimaFila: filaNum, nom: row[ROSTER_IDX.NOM], mail: row[ROSTER_IDX.MAIL], estat: row };
+      grups.push(grupActual);
+    } else if (grupActual && teContingut) {
+      grupActual.ultimaFila = filaNum;
+      grupActual.estat = row;
+    } else if (!teContingut) {
+      grupActual = null;
+    }
+  });
+
+  return grups;
+}
+
+function obtenirDashboardRoster_(ss) {
+  const hoja = obtenirFullRoster_(ss);
+  const last = hoja.getLastRow();
+  if (last < 3) {
+    return { tiles: { actius: 0, finalitzats: 0, pendentsDocumentacio: 0, total: 0 }, alumnes: [] };
+  }
+
+  const files = hoja.getRange(3, 1, last - 2, ROSTER_COLUMNS.length).getValues();
+  const grups = agruparAlumnesRoster_(files, 3);
+
+  let actius = 0, finalitzats = 0, pendentsDocumentacio = 0;
+  const alumnes = grups.map(function (g) {
+    const row = g.estat;
+    const practiques = row[ROSTER_IDX.PRACTIQUES];
+    const notaFinal = row[ROSTER_IDX.NOTA_FINAL];
+    const acord = row[ROSTER_IDX.ACORD];
+    const quadern = row[ROSTER_IDX.QUADERN];
+
+    const finalitzat = !!notaFinal;
+    const actiu = !finalitzat && practiques === 'SI';
+    const faltaDocument = !finalitzat && (acord !== 'Enviat alumne/empresa' || quadern !== 'Enviat definitiu');
+
+    if (finalitzat) finalitzats++;
+    else if (actiu) actius++;
+    if (actiu && faltaDocument) pendentsDocumentacio++;
+
+    return {
+      primeraFila: g.primeraFila,
+      ultimaFila: g.ultimaFila,
+      nom: g.nom,
+      mail: g.mail,
+      empresa: row[6],
+      practiques: practiques,
+      acord: acord,
+      quadern: quadern,
+      notaFinal: notaFinal,
+      finalitzat: finalitzat,
+      actiu: actiu,
+      faltaDocument: faltaDocument
+    };
+  });
+
+  return {
+    tiles: {
+      actius: actius,
+      finalitzats: finalitzats,
+      pendentsDocumentacio: pendentsDocumentacio,
+      total: grups.length
+    },
+    alumnes: alumnes
+  };
 }
 
 // ==== API WEB (doGet / doPost) ====
@@ -625,9 +673,9 @@ function executarAccio_(accio, payload, ss) {
   if (!ss) { const e = new Error('Falta sheetId'); e.code = 'MISSING_SHEET'; throw e; }
 
   switch (accio) {
-    case 'getDashboard': return obtenirDashboard_(ss);
-    case 'getSheetData': return obtenirDadesFull_(ss, payload.sheetName);
-    case 'updateCell': return actualitzarCella_(ss, payload);
+    case 'getDashboard': return obtenirDashboardRoster_(ss);
+    case 'getSheetData': return obtenirDadesRoster_(ss);
+    case 'updateCell': return actualitzarCellaRoster_(ss, payload);
     case 'getPlantilles': return obtenirPlantillesApi_(ss);
     case 'getStudents': return obtenirAlumnes_(ss);
     case 'previewCorreu': return generarAssumpteICos_(ss, payload.alumneRow, payload.plantillaNom);
@@ -638,48 +686,7 @@ function executarAccio_(accio, payload, ss) {
   }
 }
 
-// ==== HANDLERS DE L'API ====
-
-function obtenirDadesFull_(ss, nomFull) {
-  const hoja = ss.getSheetByName(nomFull);
-  if (!hoja) { const e = new Error('Full no trobat: ' + nomFull); e.code = 'NOT_FOUND'; throw e; }
-
-  const primeraFila = nomFull === 'Plantilles' ? 4 : 1;
-  const numCols = nomFull === 'Enviament' ? 21 : (nomFull === 'Plantilles' ? 3 : 6);
-  if (nomFull === 'Enviament') assegurarColumnes_(hoja, 21);
-  const last = hoja.getLastRow();
-
-  if (last < primeraFila) {
-    return { headers: [], rows: [], columnTypes: TIPUS_COLUMNES[nomFull] || {}, editable: WHITELISTED_SHEETS.indexOf(nomFull) !== -1 };
-  }
-
-  const headers = hoja.getRange(primeraFila, 1, 1, numCols).getValues()[0];
-  const numFilesDades = last - primeraFila;
-  const rows = numFilesDades > 0
-    ? hoja.getRange(primeraFila + 1, 1, numFilesDades, numCols).getValues().map(function (fila, i) {
-      return { row: primeraFila + 1 + i, values: fila };
-    })
-    : [];
-
-  return { headers: headers, rows: rows, columnTypes: TIPUS_COLUMNES[nomFull] || {}, editable: WHITELISTED_SHEETS.indexOf(nomFull) !== -1 };
-}
-
-function actualitzarCella_(ss, payload) {
-  const nomFull = payload.sheetName;
-  if (WHITELISTED_SHEETS.indexOf(nomFull) === -1) {
-    const e = new Error('Full no editable: ' + nomFull); e.code = 'FORBIDDEN'; throw e;
-  }
-  const hoja = ss.getSheetByName(nomFull);
-  if (!hoja) { const e = new Error('Full no trobat'); e.code = 'NOT_FOUND'; throw e; }
-
-  const tipus = (TIPUS_COLUMNES[nomFull] || {})[payload.col - 1] || 'text';
-  let valor = payload.value;
-  if (tipus === 'checkbox') valor = valor === true || valor === 'true';
-  else if (tipus === 'data') valor = valor ? new Date(valor) : '';
-
-  hoja.getRange(payload.row, payload.col).setValue(valor);
-  return { row: payload.row, col: payload.col, value: valor };
-}
+// ==== HANDLERS DE L'API — "Enviar correus" (full Enviament/Plantilles) ====
 
 function obtenirPlantillesApi_(ss) {
   const hoja = ss.getSheetByName(SHEETS.PLANTILLES);

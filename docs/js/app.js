@@ -20,6 +20,7 @@ const App = (function () {
     });
     if (name === 'dashboard') Dashboard.load();
     if (name === 'excel') Excel.loadActiveTab();
+    if (name === 'correus' && State.getSheetIdCorreus()) Correus.reload();
   }
 
   function onAuthenticated() {

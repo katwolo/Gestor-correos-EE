@@ -3,32 +3,67 @@ const Correus = (function () {
   let plantilles = [];
 
   function init() {
+    document.getElementById('correus-sheet-link-save').addEventListener('click', onSaveLink);
+    document.getElementById('configurar-full-btn').addEventListener('click', onConfigurar);
     document.getElementById('correus-alumne').addEventListener('change', onSeleccio);
     document.getElementById('correus-plantilla').addEventListener('change', onSeleccio);
     document.getElementById('correus-enviar').addEventListener('click', onEnviar);
-    State.on('sheetId', refreshGate);
+
+    const input = document.getElementById('correus-sheet-link-input');
+    const existing = State.getSheetIdCorreus();
+    if (existing) input.value = 'https://docs.google.com/spreadsheets/d/' + existing;
+
+    State.on('sheetIdCorreus', function () { refreshGate(); });
+    refreshGate();
+  }
+
+  function onSaveLink() {
+    const raw = document.getElementById('correus-sheet-link-input').value.trim();
+    const id = Util.extractSheetId(raw);
+    const status = document.getElementById('correus-sheet-link-status');
+    if (!id) {
+      status.textContent = 'No s\'ha reconegut cap ID de Google Sheets en aquest enllaç.';
+      return;
+    }
+    State.setSheetIdCorreus(id);
+    status.textContent = 'Enllaç desat.';
     refreshGate();
   }
 
   function refreshGate() {
-    const has = !!State.getSheetId();
+    const has = !!State.getSheetIdCorreus();
     document.getElementById('correus-no-sheet').classList.toggle('hidden', has);
     document.getElementById('correus-form').classList.toggle('hidden', !has);
     if (has) loadOptions();
   }
 
+  async function onConfigurar() {
+    if (!State.getSheetIdCorreus()) return;
+    if (!confirm('Això prepara el full "Enviament" (capçaleres, caselles) i "Plantilles" (plantilles d\'exemple si cal). Es pot executar diverses vegades sense problema. Continuar?')) return;
+    try {
+      const data = await Api.call('configurarFull', { sheetId: State.getSheetIdCorreus() });
+      Util.showToast('Full configurat: ' + data.canvis.length + ' canvi(s) aplicat(s).');
+      loadOptions();
+    } catch (err) {
+      Util.showToast('No s\'ha pogut configurar: ' + err.message, 'error');
+    }
+  }
+
   async function loadOptions() {
+    const sheetId = State.getSheetIdCorreus();
+    if (!sheetId) return;
     try {
       const [alumnesData, plantillesData] = await Promise.all([
-        Api.call('getStudents', {}),
-        Api.call('getPlantilles', {})
+        Api.call('getStudents', { sheetId: sheetId }),
+        Api.call('getPlantilles', { sheetId: sheetId })
       ]);
       alumnes = alumnesData.alumnes;
       plantilles = plantillesData.plantilles;
 
       const selAlumne = document.getElementById('correus-alumne');
       selAlumne.innerHTML = '<option value="">-- Selecciona --</option>' + alumnes.map(function (a) {
-        return '<option value="' + a.row + '">' + Util.escapeHtml(a.nomAlumne) + '</option>';
+        return '<option value="' + a.row + '">' + Util.escapeHtml(a.nomAlumne) +
+          (a.nomTutor ? ' (tutor/a: ' + Util.escapeHtml(a.nomTutor) + ')' : '') + '</option>';
       }).join('');
 
       const selPlantilla = document.getElementById('correus-plantilla');
@@ -46,7 +81,9 @@ const Correus = (function () {
     if (!alumneRow || !plantillaNom) return;
 
     try {
-      const data = await Api.call('previewCorreu', { alumneRow: Number(alumneRow), plantillaNom: plantillaNom });
+      const data = await Api.call('previewCorreu', {
+        sheetId: State.getSheetIdCorreus(), alumneRow: Number(alumneRow), plantillaNom: plantillaNom
+      });
       document.getElementById('correus-assumpte').value = data.assumpte;
       document.getElementById('correus-cos').innerHTML = data.cos;
     } catch (err) {
@@ -74,6 +111,7 @@ const Correus = (function () {
 
     try {
       const data = await Api.call('enviarCorreu', {
+        sheetId: State.getSheetIdCorreus(),
         alumneRow: Number(alumneRow), plantillaNom: plantillaNom,
         assumpte: assumpte, cos: cos, adjunts: adjunts
       });
@@ -90,5 +128,5 @@ const Correus = (function () {
     }
   }
 
-  return { init: init };
+  return { init: init, reload: loadOptions };
 })();

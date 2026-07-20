@@ -223,6 +223,7 @@ html, body {
 /* ---- Excel oficial ---- */
 
 .sheet-link-box { margin-bottom: 20px; }
+.sheet-link-box .tab-btn { margin-top: 10px; }
 .sheet-link-row { display: flex; gap: 8px; margin-top: 6px; }
 .sheet-link-row input { flex: 1; }
 

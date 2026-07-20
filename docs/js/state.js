@@ -2,7 +2,8 @@ const State = (function () {
   const listeners = {};
   const data = {
     password: null, // només en memòria, mai a localStorage
-    sheetId: localStorage.getItem('eeSheetId') || null
+    sheetIdOficial: localStorage.getItem('eeSheetIdOficial') || null, // Dashboard / Excel oficial (roster)
+    sheetIdCorreus: localStorage.getItem('eeSheetIdCorreus') || null  // Enviar correus (Enviament/Plantilles/Registre)
   };
 
   function on(event, cb) {
@@ -13,13 +14,22 @@ const State = (function () {
     (listeners[event] || []).forEach(function (cb) { cb(payload); });
   }
 
-  function getSheetId() { return data.sheetId; }
+  function getSheetIdOficial() { return data.sheetIdOficial; }
 
-  function setSheetId(id) {
-    data.sheetId = id;
-    if (id) localStorage.setItem('eeSheetId', id);
-    else localStorage.removeItem('eeSheetId');
-    emit('sheetId', id);
+  function setSheetIdOficial(id) {
+    data.sheetIdOficial = id;
+    if (id) localStorage.setItem('eeSheetIdOficial', id);
+    else localStorage.removeItem('eeSheetIdOficial');
+    emit('sheetIdOficial', id);
+  }
+
+  function getSheetIdCorreus() { return data.sheetIdCorreus; }
+
+  function setSheetIdCorreus(id) {
+    data.sheetIdCorreus = id;
+    if (id) localStorage.setItem('eeSheetIdCorreus', id);
+    else localStorage.removeItem('eeSheetIdCorreus');
+    emit('sheetIdCorreus', id);
   }
 
   function setPassword(password) {
@@ -36,7 +46,8 @@ const State = (function () {
 
   return {
     on: on, emit: emit,
-    getSheetId: getSheetId, setSheetId: setSheetId,
+    getSheetIdOficial: getSheetIdOficial, setSheetIdOficial: setSheetIdOficial,
+    getSheetIdCorreus: getSheetIdCorreus, setSheetIdCorreus: setSheetIdCorreus,
     setPassword: setPassword, clearPassword: clearPassword, getPassword: getPassword
   };
 })();

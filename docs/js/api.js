@@ -8,11 +8,13 @@ class ApiError extends Error {
 const Api = (function () {
   // IMPORTANT: cal Content-Type: text/plain per evitar que el navegador faci un
   // preflight OPTIONS que Apps Script no pot respondre (trencaria totes les crides).
+  // `payload` ha d'incloure explícitament `sheetId` (Dashboard/Excel oficial i
+  // Enviar correus fan servir Sheets diferents, no hi ha cap valor per defecte).
   async function call(action, payload) {
     const body = {
       action: action,
       password: State.getPassword(),
-      payload: Object.assign({ sheetId: State.getSheetId() }, payload || {})
+      payload: payload || {}
     };
 
     let res;
