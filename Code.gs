@@ -27,7 +27,7 @@ const BLOCS = [
   { casella: 12, plantilla: 13, adjunt: 14, data: 15 } // Bloc 3 "Valoració final" (M-P)
 ];
 
-const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'insertRow', 'updatePlantilla'];
+const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'insertRow', 'updatePlantilla', 'updateAlumneTutor'];
 
 // Mapa de visualització (Plantilles!C fa servir aquest text amb majúscules/accents;
 // cargarPlantilles_ ho normalitza tot a minúscules per fer-hi coincidències).
@@ -569,18 +569,32 @@ function inserirFilaRoster_(ss, payload) {
   return { insertedRow: afterRow + 1 };
 }
 
-// Agrupa files consecutives del mateix alumne (nom en blanc = mateix conveni/grup);
-// cada grup fa servir la ÚLTIMA fila amb contingut com a "estat" actual.
+// Agrupa totes les files d'un mateix alumne (diversos convenis) en un sol grup,
+// tant si les files addicionals deixen el nom en blanc (continuació) com si hi
+// repeteixen el nom (p.ex. en afegir manualment una fila nova). El grup sempre
+// fa servir la fila més avall (l'última introduïda) com a "estat" actual, de
+// manera que només el conveni més recent compta com a actiu/finalitzat.
 function agruparAlumnesRoster_(files, primeraFilaNum) {
   const grups = [];
+  const indexPerNom = {};
   let grupActual = null;
 
   files.forEach(function (row, i) {
     const filaNum = primeraFilaNum + i;
     const teContingut = row.some(function (v) { return v !== '' && v !== null; });
-    if (row[ROSTER_IDX.NOM]) {
-      grupActual = { primeraFila: filaNum, ultimaFila: filaNum, nom: row[ROSTER_IDX.NOM], mail: row[ROSTER_IDX.MAIL], estat: row };
-      grups.push(grupActual);
+    const nomFila = row[ROSTER_IDX.NOM] ? String(row[ROSTER_IDX.NOM]).trim() : '';
+
+    if (nomFila) {
+      const clau = nomFila.toLowerCase();
+      if (Object.prototype.hasOwnProperty.call(indexPerNom, clau)) {
+        grupActual = grups[indexPerNom[clau]];
+        grupActual.ultimaFila = filaNum;
+        grupActual.estat = row;
+      } else {
+        grupActual = { primeraFila: filaNum, ultimaFila: filaNum, nom: row[ROSTER_IDX.NOM], mail: row[ROSTER_IDX.MAIL], estat: row };
+        indexPerNom[clau] = grups.length;
+        grups.push(grupActual);
+      }
     } else if (grupActual && teContingut) {
       grupActual.ultimaFila = filaNum;
       grupActual.estat = row;
@@ -728,6 +742,7 @@ function executarAccio_(accio, payload, ss) {
     case 'getPlantilles': return obtenirPlantillesApi_(ss);
     case 'updatePlantilla': return actualitzarPlantilla_(ss, payload);
     case 'getStudents': return obtenirAlumnes_(ss);
+    case 'updateAlumneTutor': return actualitzarTutorAlumne_(ss, payload);
     case 'previewCorreu': return generarAssumpteICos_(ss, payload.alumneRow, payload.plantillaNom);
     case 'enviarCorreu': return accioEnviarCorreu_(payload, ss);
     case 'configurarFull': return { canvis: configurarFullEnviament_(ss) };
@@ -765,6 +780,15 @@ function actualitzarPlantilla_(ss, payload) {
     const valorMostrat = DESTINATARI_DISPLAY[String(payload.destinatari).trim().toLowerCase()] || payload.destinatari;
     hoja.getRange(fila, 3).setValue(valorMostrat);
   }
+  return { ok: true };
+}
+
+// Permet editar el nom i el correu del tutor/a d'empresa (columnes C/D) d'un
+// alumne des de la mateixa web, sense haver d'obrir el Sheet directament.
+function actualitzarTutorAlumne_(ss, payload) {
+  const hoja = ss.getSheetByName(SHEETS.ENVIAMENT);
+  if (payload.nomTutor !== undefined) hoja.getRange(payload.alumneRow, 3).setValue(payload.nomTutor);
+  if (payload.correuTutor !== undefined) hoja.getRange(payload.alumneRow, 4).setValue(payload.correuTutor);
   return { ok: true };
 }
 

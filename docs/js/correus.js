@@ -4,9 +4,9 @@ const Correus = (function () {
   let cercaAlumne = '';
   let wizard = { step: 'alumne', alumneRow: null, plantillaNom: null, adjunts: '', assumpte: '', cos: '', destinataris: [] };
 
-  const STEP_ORDER = ['alumne', 'plantilla', 'adjunts', 'confirmar'];
-  const STEP_LABELS = { alumne: 'Alumne/a', plantilla: 'Plantilla', adjunts: 'Adjunts', confirmar: 'Confirmar' };
-  const STEP_ICONS = { alumne: '👤', plantilla: '📄', adjunts: '📎', confirmar: '✅' };
+  const STEP_ORDER = ['alumne', 'tutor', 'plantilla', 'adjunts', 'confirmar'];
+  const STEP_LABELS = { alumne: 'Alumne/a', tutor: 'Tutor/a', plantilla: 'Plantilla', adjunts: 'Adjunts', confirmar: 'Confirmar' };
+  const STEP_ICONS = { alumne: '👤', tutor: '🏢', plantilla: '📄', adjunts: '📎', confirmar: '✅' };
   const DESTINATARI_LABELS = { 'tutor/a': 'Tutor/a', alumnat: 'Alumnat', 'ambdós': 'Ambdós' };
 
   function init() {
@@ -96,6 +96,7 @@ const Correus = (function () {
 
   function renderStepBody() {
     if (wizard.step === 'alumne') return renderAlumneStep();
+    if (wizard.step === 'tutor') return renderTutorStep();
     if (wizard.step === 'plantilla') return renderPlantillaStep();
     if (wizard.step === 'adjunts') return renderAdjuntsStep();
     return renderConfirmarStep();
@@ -113,12 +114,30 @@ const Correus = (function () {
       '<input id="w-cerca-alumne" type="text" class="wizard-search" placeholder="🔎 Cerca per nom..." value="' + Util.escapeHtml(cercaAlumne) + '">' +
       '<div class="wizard-list">' +
       (filtrats.length ? filtrats.map(function (a) {
+        const tutorTxt = a.nomTutor ? ('Tutor/a: ' + a.nomTutor + (a.correuTutor ? ' (' + a.correuTutor + ')' : '')) : 'Sense tutor/a assignat';
         return '<div class="list-item" data-row="' + a.row + '">' +
           '<div class="list-item-title">' + Util.escapeHtml(a.nomAlumne) + '</div>' +
-          (a.nomTutor ? '<div class="list-item-sub">Tutor/a: ' + Util.escapeHtml(a.nomTutor) + '</div>' : '') +
+          '<div class="list-item-sub">' + Util.escapeHtml(tutorTxt) + '</div>' +
           '</div>';
       }).join('') : '<p class="hint-text">Cap alumne coincideix amb la cerca.</p>') +
       '</div>' +
+      '</div>';
+  }
+
+  function renderTutorStep() {
+    const alumne = alumnes.find(function (a) { return a.row === wizard.alumneRow; });
+    if (!alumne) return '<p class="hint-text">Selecciona primer un alumne/a.</p>';
+    return '<div class="wizard-step">' +
+      '<button class="btn-link wizard-back" data-goto="alumne">← Canvia d\'alumne/a</button>' +
+      '<h3>Dades del tutor/a d\'empresa</h3>' +
+      '<p class="hint-text">Alumne/a: <strong>' + Util.escapeHtml(alumne.nomAlumne) + '</strong></p>' +
+      '<div class="form-row"><label for="w-tutor-nom">Nom del tutor/a</label>' +
+      '<input id="w-tutor-nom" type="text" value="' + Util.escapeHtml(alumne.nomTutor || '') + '"></div>' +
+      '<div class="form-row"><label for="w-tutor-correu">Correu del tutor/a</label>' +
+      '<input id="w-tutor-correu" type="email" value="' + Util.escapeHtml(alumne.correuTutor || '') + '"></div>' +
+      '<button id="w-desar-tutor" class="btn-link">💾 Desa les dades del tutor/a</button> ' +
+      '<button id="w-continuar-tutor" class="btn-primary">Continuar →</button>' +
+      '<p id="w-tutor-resultat" class="hint-text"></p>' +
       '</div>';
   }
 
@@ -126,7 +145,7 @@ const Correus = (function () {
     const alumne = alumnes.find(function (a) { return a.row === wizard.alumneRow; });
     const plantillaActual = plantilles.find(function (p) { return p.nom === wizard.plantillaNom; });
     return '<div class="wizard-step">' +
-      '<button class="btn-link wizard-back" data-goto="alumne">← Canvia d\'alumne/a</button>' +
+      '<button class="btn-link wizard-back" data-goto="tutor">← Canvia el tutor/a</button>' +
       '<h3>Selecciona la plantilla</h3>' +
       '<p class="hint-text">Alumne/a: <strong>' + Util.escapeHtml(alumne ? alumne.nomAlumne : '') + '</strong></p>' +
       '<div class="wizard-list">' +
@@ -213,10 +232,17 @@ const Correus = (function () {
       document.querySelectorAll('#correus-wizard .wizard-list .list-item').forEach(function (el) {
         el.addEventListener('click', function () {
           wizard.alumneRow = Number(el.dataset.row);
-          wizard.step = 'plantilla';
+          wizard.step = 'tutor';
           render();
         });
       });
+    }
+
+    if (wizard.step === 'tutor') {
+      const continuarBtn = document.getElementById('w-continuar-tutor');
+      if (continuarBtn) continuarBtn.addEventListener('click', function () { wizard.step = 'plantilla'; render(); });
+      const desarBtn = document.getElementById('w-desar-tutor');
+      if (desarBtn) desarBtn.addEventListener('click', onDesarTutor);
     }
 
     if (wizard.step === 'plantilla') {
@@ -239,6 +265,24 @@ const Correus = (function () {
     if (wizard.step === 'confirmar') {
       document.getElementById('w-enviar').addEventListener('click', onEnviar);
       document.getElementById('w-cancelar').addEventListener('click', resetWizard);
+    }
+  }
+
+  async function onDesarTutor() {
+    const nomTutor = document.getElementById('w-tutor-nom').value.trim();
+    const correuTutor = document.getElementById('w-tutor-correu').value.trim();
+    const resultatEl = document.getElementById('w-tutor-resultat');
+    try {
+      await Api.call('updateAlumneTutor', {
+        sheetId: State.getSheetIdCorreus(), alumneRow: wizard.alumneRow, nomTutor: nomTutor, correuTutor: correuTutor
+      });
+      const alumne = alumnes.find(function (a) { return a.row === wizard.alumneRow; });
+      if (alumne) { alumne.nomTutor = nomTutor; alumne.correuTutor = correuTutor; }
+      resultatEl.textContent = 'Dades del tutor/a desades.';
+      Util.showToast('Dades del tutor/a desades.');
+    } catch (err) {
+      resultatEl.textContent = 'Error: ' + err.message;
+      Util.showToast('No s\'han pogut desar les dades del tutor/a: ' + err.message, 'error');
     }
   }
 
