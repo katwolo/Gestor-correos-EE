@@ -3,6 +3,7 @@ const Dashboard = (function () {
     actius: 'Actius',
     finalitzats: 'Finalitzats',
     pendentsDocumentacio: 'Pendents de documentació',
+    ambExempcio: 'Amb exempció de pràctiques',
     total: 'Total alumnat'
   };
 
@@ -49,7 +50,7 @@ const Dashboard = (function () {
     }
     container.innerHTML = alumnes.map(function (a) {
       const estatKey = a.finalitzat ? 'finalitzat' : (a.actiu ? 'actiu' : 'inactiu');
-      const badgeClass = a.finalitzat ? 'done' : (a.faltaDocument ? '' : 'current');
+      const badgeClass = a.teExempcio ? 'exempcio' : (a.finalitzat ? 'done' : (a.faltaDocument ? '' : 'current'));
       return '<div class="student-card">' +
         '<div class="student-name">' + Util.escapeHtml(a.nom) + '</div>' +
         '<div class="student-fase">' + Util.escapeHtml(a.empresa || 'Sense empresa assignada') + '</div>' +
@@ -57,7 +58,8 @@ const Dashboard = (function () {
         '<span class="fase-dot ' + badgeClass + '" title="' + Util.escapeHtml(ESTAT_LABELS[estatKey]) + '"></span>' +
         '</div>' +
         '<div class="hint-text">' + Util.escapeHtml(ESTAT_LABELS[estatKey]) +
-        (a.faltaDocument && !a.finalitzat ? ' · falta documentació' : '') + '</div>' +
+        (a.faltaDocument && !a.finalitzat ? ' · falta documentació' : '') +
+        (a.teExempcio ? ' · <strong>Exempció: ' + Util.escapeHtml(a.exempcio) + '</strong>' : '') + '</div>' +
         '</div>';
     }).join('');
   }

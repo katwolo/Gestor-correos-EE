@@ -68,12 +68,13 @@ Al repositori de GitHub: **Settings → Pages → Source: Deploy from a branch �
 1. Obre la URL de Pages → surt la pantalla demanant la contrasenya.
 2. Introdueix la contrasenya correcta (`APP_PASSWORD`) → hauria d'aparèixer el panell principal.
 3. Prova amb una contrasenya incorrecta → ha de sortir "Contrasenya incorrecta", no una pantalla en blanc.
-4. A "Excel oficial", enganxa l'enllaç del teu Excel oficial de seguiment → han d'aparèixer les dades del dashboard i la graella (respecta la primera pestanya).
+4. A "Excel oficial", enganxa l'enllaç del teu Excel oficial de seguiment → han d'aparèixer les dades del dashboard (incloent el rètol "Amb exempció de pràctiques") i la graella (respecta la primera pestanya).
 5. Edita una cel·la de prova a la graella (p. ex. una llista desplegable com "Contactes amb l'empresa") → comprova que el canvi es reflecteix al Sheet real.
-6. A "Enviar correus", enganxa l'enllaç del Sheet d'enviament (diferent de l'anterior), prem "⚙️ Configurar aquest full" si és la primera vegada, tria un alumne i una plantilla → comprova la previsualització, edita-la i envia un correu de prova → comprova que arriba el text editat (no el de la plantilla original), que `Registre` registra `Estat=OK`, i que si la plantilla era una de les 3 principals, la casella i la data corresponents del Sheet s'actualitzen soles.
-7. Prova un enviament amb un adjunt de Drive invàlid barrejat amb un de vàlid → el correu ha d'arribar amb l'adjunt vàlid, no sense cap.
-8. A **Activadors** (rellotge, barra lateral de l'editor d'Apps Script) comprova que `enviament` segueix programat cada dia a les 8:00.
-9. Mòbil: obre la URL de Pages al mòbil (o simula-ho amb les eines de desenvolupador) i navega per les 3 seccions.
+6. Prova el botó "+ fila" d'una fila → ha d'aparèixer una fila nova buida just a sota al Sheet real (per afegir un segon conveni del mateix alumne, deixant el nom en blanc).
+7. A "Enviar correus", enganxa l'enllaç del Sheet d'enviament (diferent de l'anterior), prem "⚙️ Configurar aquest full" si és la primera vegada, i segueix l'assistent: alumne/a → plantilla (prova també "✏️ Editar aquesta plantilla" i comprova que es desa al Sheet) → adjunts → confirmar. Comprova que la previsualització mostra els destinataris correctes, edita el cos i envia un correu de prova → comprova que arriba el text editat, que `Registre` registra `Estat=OK`, i que si la plantilla era una de les 3 principals, la casella i la data corresponents del Sheet s'actualitzen soles.
+8. Prova un enviament amb un adjunt de Drive invàlid barrejat amb un de vàlid → el correu ha d'arribar amb l'adjunt vàlid, no sense cap.
+9. A **Activadors** (rellotge, barra lateral de l'editor d'Apps Script) comprova que `enviament` segueix programat cada dia a les 8:00.
+10. Mòbil: obre la URL de Pages al mòbil (o simula-ho amb les eines de desenvolupador) i navega per les 3 seccions.
 
 ## 8. Cada curs nou
 

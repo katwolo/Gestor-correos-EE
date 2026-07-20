@@ -27,7 +27,11 @@ const BLOCS = [
   { casella: 12, plantilla: 13, adjunt: 14, data: 15 } // Bloc 3 "Valoració final" (M-P)
 ];
 
-const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull'];
+const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'insertRow', 'updatePlantilla'];
+
+// Mapa de visualització (Plantilles!C fa servir aquest text amb majúscules/accents;
+// cargarPlantilles_ ho normalitza tot a minúscules per fer-hi coincidències).
+const DESTINATARI_DISPLAY = { 'tutor/a': 'Tutor/a', alumnat: 'Alumnat', 'ambdós': 'Ambdós' };
 
 // ==== MENÚ / ONOPEN (full lligat) ====
 
@@ -211,12 +215,9 @@ function notificarProblemes_(llista) {
 
 // ==== NUCLI D'ENVIAMENT COMPARTIT (trigger + enviament manual des de la web) ====
 
-function enviarCorreuCore_(params) {
-  const dades = params.dades;
-  const plantillaObj = params.plantillaObj;
-
+function resoldreDestinataris_(dades, tipusDestinatari) {
   const destinataris = [];
-  switch (plantillaObj.destinatari) {
+  switch (tipusDestinatari) {
     case 'alumnat':
       if (dades.correuAlumne) destinataris.push(dades.correuAlumne);
       break;
@@ -229,6 +230,13 @@ function enviarCorreuCore_(params) {
       if (dades.correuTutor) destinataris.push(dades.correuTutor);
       break;
   }
+  return destinataris;
+}
+
+function enviarCorreuCore_(params) {
+  const dades = params.dades;
+  const plantillaObj = params.plantillaObj;
+  const destinataris = resoldreDestinataris_(dades, plantillaObj.destinatari);
 
   const enviats = [];
   const errors = [];
@@ -498,7 +506,7 @@ const ROSTER_COLUMNS = [
   { header: 'Mòbil tutor/a empresa', tipus: 'text' }
 ];
 // Índexs 0-based per llegibilitat al codi de sota.
-const ROSTER_IDX = { NOM: 0, MAIL: 1, PRACTIQUES: 2, ACORD: 12, QUADERN: 20, NOTA_FINAL: 21 };
+const ROSTER_IDX = { NOM: 0, MAIL: 1, PRACTIQUES: 2, ACORD: 12, EXEMPCIO: 14, QUADERN: 20, NOTA_FINAL: 21 };
 
 function obtenirFullRoster_(ss) {
   const fulls = ss.getSheets();
@@ -533,6 +541,18 @@ function actualitzarCellaRoster_(ss, payload) {
   return { row: payload.row, col: payload.col, value: valor };
 }
 
+// Insereix una fila buida just després de `afterRow` (Sheets copia el format i
+// les validacions de la fila anterior automàticament). Serveis per afegir un
+// nou conveni/acord consecutiu per a un alumne (deixant el nom en blanc, com
+// la resta de convenis addicionals del mateix grup).
+function inserirFilaRoster_(ss, payload) {
+  const hoja = obtenirFullRoster_(ss);
+  const afterRow = Number(payload.afterRow);
+  if (!afterRow || afterRow < 2) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
+  hoja.insertRowAfter(afterRow);
+  return { insertedRow: afterRow + 1 };
+}
+
 // Agrupa files consecutives del mateix alumne (nom en blanc = mateix conveni/grup);
 // cada grup fa servir la ÚLTIMA fila amb contingut com a "estat" actual.
 function agruparAlumnesRoster_(files, primeraFilaNum) {
@@ -556,23 +576,31 @@ function agruparAlumnesRoster_(files, primeraFilaNum) {
   return grups;
 }
 
+// Exempció "en curs" (a comptar al dashboard): qualsevol valor real diferent
+// de "No aplica" (sol·licitud enviada, un percentatge concedit o denegada).
+function teExempcio_(valor) {
+  return !!valor && valor !== 'No aplica';
+}
+
 function obtenirDashboardRoster_(ss) {
   const hoja = obtenirFullRoster_(ss);
   const last = hoja.getLastRow();
   if (last < 3) {
-    return { tiles: { actius: 0, finalitzats: 0, pendentsDocumentacio: 0, total: 0 }, alumnes: [] };
+    return { tiles: { actius: 0, finalitzats: 0, pendentsDocumentacio: 0, ambExempcio: 0, total: 0 }, alumnes: [] };
   }
 
   const files = hoja.getRange(3, 1, last - 2, ROSTER_COLUMNS.length).getValues();
   const grups = agruparAlumnesRoster_(files, 3);
 
-  let actius = 0, finalitzats = 0, pendentsDocumentacio = 0;
+  let actius = 0, finalitzats = 0, pendentsDocumentacio = 0, ambExempcio = 0;
   const alumnes = grups.map(function (g) {
     const row = g.estat;
     const practiques = row[ROSTER_IDX.PRACTIQUES];
     const notaFinal = row[ROSTER_IDX.NOTA_FINAL];
     const acord = row[ROSTER_IDX.ACORD];
     const quadern = row[ROSTER_IDX.QUADERN];
+    const exempcio = row[ROSTER_IDX.EXEMPCIO];
+    const teExempcioActiva = teExempcio_(exempcio);
 
     const finalitzat = !!notaFinal;
     const actiu = !finalitzat && practiques === 'SI';
@@ -581,6 +609,7 @@ function obtenirDashboardRoster_(ss) {
     if (finalitzat) finalitzats++;
     else if (actiu) actius++;
     if (actiu && faltaDocument) pendentsDocumentacio++;
+    if (teExempcioActiva) ambExempcio++;
 
     return {
       primeraFila: g.primeraFila,
@@ -592,6 +621,8 @@ function obtenirDashboardRoster_(ss) {
       acord: acord,
       quadern: quadern,
       notaFinal: notaFinal,
+      exempcio: exempcio,
+      teExempcio: teExempcioActiva,
       finalitzat: finalitzat,
       actiu: actiu,
       faltaDocument: faltaDocument
@@ -603,6 +634,7 @@ function obtenirDashboardRoster_(ss) {
       actius: actius,
       finalitzats: finalitzats,
       pendentsDocumentacio: pendentsDocumentacio,
+      ambExempcio: ambExempcio,
       total: grups.length
     },
     alumnes: alumnes
@@ -676,7 +708,9 @@ function executarAccio_(accio, payload, ss) {
     case 'getDashboard': return obtenirDashboardRoster_(ss);
     case 'getSheetData': return obtenirDadesRoster_(ss);
     case 'updateCell': return actualitzarCellaRoster_(ss, payload);
+    case 'insertRow': return inserirFilaRoster_(ss, payload);
     case 'getPlantilles': return obtenirPlantillesApi_(ss);
+    case 'updatePlantilla': return actualitzarPlantilla_(ss, payload);
     case 'getStudents': return obtenirAlumnes_(ss);
     case 'previewCorreu': return generarAssumpteICos_(ss, payload.alumneRow, payload.plantillaNom);
     case 'enviarCorreu': return accioEnviarCorreu_(payload, ss);
@@ -695,6 +729,27 @@ function obtenirPlantillesApi_(ss) {
     return { nom: mapa[key].nom, cos: mapa[key].cos, destinatari: mapa[key].destinatari };
   });
   return { assumpteBase: obtenirAssumpteBase_(hoja), plantilles: llista };
+}
+
+// Desa canvis d'una plantilla existent (cos i/o destinatari) directament al full
+// "Plantilles", perquè es puguin editar les plantilles des de la mateixa web.
+function actualitzarPlantilla_(ss, payload) {
+  const hoja = ss.getSheetByName(SHEETS.PLANTILLES);
+  const last = hoja.getLastRow();
+  if (last < 5) { const e = new Error('No hi ha plantilles'); e.code = 'NOT_FOUND'; throw e; }
+
+  const noms = hoja.getRange(5, 1, last - 4, 1).getValues();
+  const buscada = String(payload.plantillaNom || '').trim().toLowerCase();
+  const idx = noms.findIndex(function (fila) { return String(fila[0]).trim().toLowerCase() === buscada; });
+  if (idx === -1) { const e = new Error('Plantilla no trobada: ' + payload.plantillaNom); e.code = 'NOT_FOUND'; throw e; }
+
+  const fila = 5 + idx;
+  if (payload.cos !== undefined) hoja.getRange(fila, 2).setValue(payload.cos);
+  if (payload.destinatari) {
+    const valorMostrat = DESTINATARI_DISPLAY[String(payload.destinatari).trim().toLowerCase()] || payload.destinatari;
+    hoja.getRange(fila, 3).setValue(valorMostrat);
+  }
+  return { ok: true };
 }
 
 function obtenirAlumnes_(ss) {
@@ -723,7 +778,8 @@ function generarAssumpteICos_(ss, alumneRow, plantillaNom) {
   return {
     assumpte: substituirPlaceholders_(obtenirAssumpteBase_(hojaPlantilles), dades),
     cos: substituirPlaceholders_(plantillaObj.cos, dades),
-    destinatari: plantillaObj.destinatari
+    destinatari: plantillaObj.destinatari,
+    destinataris: resoldreDestinataris_(dades, plantillaObj.destinatari)
   };
 }
 

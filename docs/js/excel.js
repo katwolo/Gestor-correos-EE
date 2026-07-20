@@ -42,12 +42,14 @@ const Excel = (function () {
 
   function renderGrid(data) {
     const table = document.getElementById('excel-table');
-    const theadCells = data.headers.map(function (h) { return '<th>' + Util.escapeHtml(h) + '</th>'; }).join('');
+    const theadCells = data.headers.map(function (h) { return '<th>' + Util.escapeHtml(h) + '</th>'; }).join('') + '<th></th>';
     const bodyRows = data.rows.map(function (rowObj) {
       const cells = rowObj.values.map(function (value, colIdx) {
         return renderCell(value, rowObj.row, colIdx, data.columnTypes[colIdx] || { tipus: 'text' });
       }).join('');
-      return '<tr>' + cells + '</tr>';
+      const addRowBtn = '<td><button class="add-row-btn" data-after-row="' + rowObj.row +
+        '" title="Insereix una fila nova (nou conveni) just després d\'aquesta">+ fila</button></td>';
+      return '<tr>' + cells + addRowBtn + '</tr>';
     }).join('');
 
     table.innerHTML = '<thead><tr>' + theadCells + '</tr></thead><tbody>' + bodyRows + '</tbody>';
@@ -79,6 +81,22 @@ const Excel = (function () {
     table.querySelectorAll('td[contenteditable="true"]').forEach(function (el) {
       el.addEventListener('blur', function () { saveCell(el, el.textContent); });
     });
+    table.querySelectorAll('.add-row-btn').forEach(function (el) {
+      el.addEventListener('click', function () { onAddRow(el); });
+    });
+  }
+
+  async function onAddRow(btn) {
+    const afterRow = Number(btn.dataset.afterRow);
+    btn.disabled = true;
+    try {
+      await Api.call('insertRow', { sheetId: State.getSheetIdOficial(), afterRow: afterRow });
+      Util.showToast('Fila afegida.');
+      loadActiveTab();
+    } catch (err) {
+      Util.showToast('No s\'ha pogut afegir la fila: ' + err.message, 'error');
+      btn.disabled = false;
+    }
   }
 
   async function saveCell(el, value) {

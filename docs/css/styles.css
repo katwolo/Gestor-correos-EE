@@ -219,6 +219,7 @@ html, body {
 }
 .fase-dot.done { background: var(--success); }
 .fase-dot.current { background: var(--primary); }
+.fase-dot.exempcio { background: #d97706; }
 
 /* ---- Excel oficial ---- */
 
@@ -256,10 +257,45 @@ html, body {
 .excel-table td.saved { background: rgba(22, 163, 74, 0.15); }
 .excel-table td.save-error { background: rgba(220, 38, 38, 0.15); }
 
+.add-row-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.add-row-btn:hover { color: var(--primary); border-color: var(--primary); }
+
 /* ---- Correus ---- */
 
 .form-row { margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px; }
 .form-row input, .form-row select { padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+
+.wizard-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  font-size: 0.8rem;
+}
+.wizard-step-badge { color: var(--text-muted); padding: 4px 8px; border-radius: 999px; }
+.wizard-step-badge.active { background: var(--primary); color: var(--primary-text); font-weight: 600; }
+.wizard-step-badge.done { color: var(--success); }
+.wizard-step-arrow { color: var(--text-muted); }
+
+.wizard-step select[size] { width: 100%; }
+.wizard-back { display: block; margin-bottom: 10px; }
+
+.plantilla-editor {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
 
 .cos-editable {
   border: 1px solid var(--border);
