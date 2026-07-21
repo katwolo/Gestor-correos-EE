@@ -3,6 +3,9 @@ const Correus = (function () {
   let plantilles = [];
   let cercaAlumne = '';
   let wizard = { step: 'alumne', alumneRow: null, items: [], adjunts: '', preview: [] };
+  let vistaProgramats = false;
+  let programats = [];
+  let programatEditant = null;
 
   const STEP_ORDER = ['alumne', 'tutor', 'plantilla', 'adjunts', 'confirmar'];
   const STEP_LABELS = { alumne: 'Alumne/a', tutor: 'Tutor/a', plantilla: 'Plantilles', adjunts: 'Adjunts', confirmar: 'Confirmar' };
@@ -11,6 +14,7 @@ const Correus = (function () {
 
   function init() {
     document.getElementById('correus-sheet-link-save').addEventListener('click', onSaveLink);
+    document.getElementById('correus-programats-btn').addEventListener('click', obrirProgramats);
 
     const input = document.getElementById('correus-sheet-link-input');
     const existing = State.getSheetIdCorreus();
@@ -37,6 +41,7 @@ const Correus = (function () {
     const has = !!State.getSheetIdCorreus();
     document.getElementById('correus-no-sheet').classList.toggle('hidden', has);
     document.getElementById('correus-wizard').classList.toggle('hidden', !has);
+    document.getElementById('correus-toolbar').classList.toggle('hidden', !has);
     if (has) loadOptions();
   }
 
@@ -59,6 +64,8 @@ const Correus = (function () {
   function resetWizard() {
     wizard = { step: 'alumne', alumneRow: null, items: [], adjunts: '', preview: [] };
     cercaAlumne = '';
+    vistaProgramats = false;
+    programatEditant = null;
     render();
   }
 
@@ -68,6 +75,11 @@ const Correus = (function () {
 
   function render() {
     const root = document.getElementById('correus-wizard');
+    if (vistaProgramats) {
+      root.innerHTML = renderProgramatsPanel();
+      wireProgramatsEvents();
+      return;
+    }
     root.innerHTML = '<div class="wizard-card">' + renderStepper() + renderStepBody() + '</div>';
     wireStepEvents();
   }
@@ -213,6 +225,102 @@ const Correus = (function () {
       '<button id="w-cancelar" class="btn-link">Cancel·la i torna a l\'inici</button>' +
       '<p id="w-resultat" class="hint-text"></p>' +
       '</div>';
+  }
+
+  function renderProgramatsPanel() {
+    const rows = programats.length
+      ? programats.map(renderProgramatItem).join('')
+      : '<p class="hint-text">No hi ha cap correu programat.</p>';
+    return '<div class="wizard-card">' +
+      '<button id="w-tancar-programats" class="btn-link wizard-back">← Torna a l\'assistent</button>' +
+      '<h3>Correus programats</h3>' +
+      '<div class="wizard-list programats-list">' + rows + '</div>' +
+      '</div>';
+  }
+
+  function estatProgramatClasse(estat) {
+    if (estat === 'Pendent') return 'programat-pendent';
+    if (estat === 'Enviat') return 'programat-enviat';
+    return 'programat-error';
+  }
+
+  function renderProgramatItem(p) {
+    const editing = programatEditant === p.row;
+    const potEditar = p.estat === 'Pendent';
+    const dataTxt = editing
+      ? '<input type="date" id="w-edit-data-' + p.row + '" value="' + Util.escapeHtml(p.data) + '">'
+      : (p.data ? ('📅 ' + Util.escapeHtml(p.data)) : 'sense data (envia\'t a l\'instant quan es processi)');
+    return '<div class="list-item programat-item">' +
+      '<div class="programat-info">' +
+      '<div class="list-item-title">' + Util.escapeHtml(p.nomAlumne || '(sense nom)') + ' — ' + Util.escapeHtml(p.plantillaNom) + '</div>' +
+      '<div class="list-item-sub">' + dataTxt + ' · <span class="programat-estat ' + estatProgramatClasse(p.estat) + '">' + Util.escapeHtml(p.estat) + '</span></div>' +
+      '</div>' +
+      '<div class="programat-actions">' +
+      (potEditar ? (editing
+        ? '<button class="btn-link" data-desar-prog="' + p.row + '">💾 Desa</button>' +
+          '<button class="btn-link" data-cancelar-prog="' + p.row + '">Cancel·la</button>'
+        : '<button class="btn-link" data-editar-prog="' + p.row + '">✏️</button>' +
+          '<button class="btn-link" data-eliminar-prog="' + p.row + '">🗑️</button>') : '') +
+      '</div>' +
+      '</div>';
+  }
+
+  function wireProgramatsEvents() {
+    const tancarBtn = document.getElementById('w-tancar-programats');
+    if (tancarBtn) tancarBtn.addEventListener('click', function () { vistaProgramats = false; render(); });
+
+    document.querySelectorAll('[data-editar-prog]').forEach(function (el) {
+      el.addEventListener('click', function () { programatEditant = Number(el.dataset.editarProg); render(); });
+    });
+    document.querySelectorAll('[data-cancelar-prog]').forEach(function (el) {
+      el.addEventListener('click', function () { programatEditant = null; render(); });
+    });
+    document.querySelectorAll('[data-desar-prog]').forEach(function (el) {
+      el.addEventListener('click', function () { onDesarProgramat(Number(el.dataset.desarProg)); });
+    });
+    document.querySelectorAll('[data-eliminar-prog]').forEach(function (el) {
+      el.addEventListener('click', function () { onEliminarProgramat(Number(el.dataset.eliminarProg)); });
+    });
+  }
+
+  async function obrirProgramats() {
+    vistaProgramats = true;
+    programatEditant = null;
+    await carregarProgramats();
+  }
+
+  async function carregarProgramats() {
+    try {
+      const data = await Api.call('getProgramats', { sheetId: State.getSheetIdCorreus() });
+      programats = data.items;
+      render();
+    } catch (err) {
+      Util.showToast('No s\'han pogut carregar els correus programats: ' + err.message, 'error');
+    }
+  }
+
+  async function onDesarProgramat(row) {
+    const input = document.getElementById('w-edit-data-' + row);
+    const novaData = input ? input.value : '';
+    try {
+      await Api.call('updateProgramat', { sheetId: State.getSheetIdCorreus(), row: row, data: novaData });
+      Util.showToast('Correu programat actualitzat.');
+      programatEditant = null;
+      await carregarProgramats();
+    } catch (err) {
+      Util.showToast('No s\'ha pogut actualitzar: ' + err.message, 'error');
+    }
+  }
+
+  async function onEliminarProgramat(row) {
+    if (!confirm('Segur que vols eliminar aquest correu programat?')) return;
+    try {
+      await Api.call('deleteProgramat', { sheetId: State.getSheetIdCorreus(), row: row });
+      Util.showToast('Correu programat eliminat.');
+      await carregarProgramats();
+    } catch (err) {
+      Util.showToast('No s\'ha pogut eliminar: ' + err.message, 'error');
+    }
   }
 
   // ==== EVENTS ====

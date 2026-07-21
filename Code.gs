@@ -27,7 +27,7 @@ const BLOCS = [
   { casella: 12, plantilla: 13, adjunt: 14, data: 15 } // Bloc 3 "Valoració final" (M-P)
 ];
 
-const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'insertRow', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments'];
+const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'insertRow', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat'];
 
 // Mapa de visualització (Plantilles!C fa servir aquest text amb majúscules/accents;
 // cargarPlantilles_ ho normalitza tot a minúscules per fer-hi coincidències).
@@ -256,6 +256,52 @@ function prepararHojaProgramats_(ss) {
     hoja.appendRow(['Fila alumne', 'Nom alumne', 'Plantilla', 'Data programada', 'Adjunts', 'Estat', 'Data creació']);
   }
   return hoja;
+}
+
+// Llista tots els correus programats (per a la vista "Veure programats" de la web).
+function obtenirProgramats_(ss) {
+  const hoja = prepararHojaProgramats_(ss);
+  const last = hoja.getLastRow();
+  if (last < 2) return { items: [] };
+  const dades = hoja.getRange(2, 1, last - 1, 7).getValues();
+  const items = dades.map(function (fila, i) {
+    const data = fila[3];
+    const dataCreacio = fila[6];
+    return {
+      row: i + 2,
+      alumneRow: fila[0],
+      nomAlumne: fila[1],
+      plantillaNom: fila[2],
+      data: data instanceof Date ? Utilities.formatDate(data, Session.getScriptTimeZone(), 'yyyy-MM-dd') : '',
+      adjunts: fila[4],
+      estat: fila[5],
+      dataCreacio: dataCreacio instanceof Date ? Utilities.formatDate(dataCreacio, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm') : ''
+    };
+  });
+  return { items: items };
+}
+
+// Edita la data (i opcionalment els adjunts) d'un correu programat encara
+// pendent. No es permet editar-ne un que ja s'hagi enviat o hagi fallat.
+function actualitzarProgramat_(ss, payload) {
+  const hoja = prepararHojaProgramats_(ss);
+  const row = Number(payload.row);
+  if (!row || row < 2 || row > hoja.getLastRow()) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
+  const estatActual = hoja.getRange(row, 6).getValue();
+  if (estatActual !== 'Pendent') { const e = new Error('Només es poden editar correus programats que encara estan pendents'); e.code = 'BAD_REQUEST'; throw e; }
+
+  if (payload.data !== undefined) hoja.getRange(row, 4).setValue(payload.data ? new Date(payload.data + 'T00:00:00') : '');
+  if (payload.adjunts !== undefined) hoja.getRange(row, 5).setValue(payload.adjunts);
+  return { ok: true };
+}
+
+// Elimina una fila de "Programats" (cancel·la un enviament programat).
+function eliminarProgramat_(ss, payload) {
+  const hoja = prepararHojaProgramats_(ss);
+  const row = Number(payload.row);
+  if (!row || row < 2 || row > hoja.getLastRow()) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
+  hoja.deleteRow(row);
+  return { ok: true };
 }
 
 function processarProgramats_(ss, hoja, hojaPlantilles, hojaRegistro, plantilles) {
@@ -928,6 +974,9 @@ function executarAccio_(accio, payload, ss) {
     case 'previewCorreu': return generarAssumpteICos_(ss, payload.alumneRow, payload.plantillaNom);
     case 'enviarCorreu': return accioEnviarCorreu_(payload, ss);
     case 'programarEnviaments': return accioProgramarEnviaments_(payload, ss);
+    case 'getProgramats': return obtenirProgramats_(ss);
+    case 'updateProgramat': return actualitzarProgramat_(ss, payload);
+    case 'deleteProgramat': return eliminarProgramat_(ss, payload);
     case 'configurarFull': return { canvis: configurarFullEnviament_(ss) };
     case 'getRegistre': return obtenirRegistre_(ss, payload.limit);
     default: { const e = new Error('Acció desconeguda: ' + accio); e.code = 'UNKNOWN_ACTION'; throw e; }

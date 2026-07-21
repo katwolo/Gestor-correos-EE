@@ -465,6 +465,18 @@ html, body {
 }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.correus-toolbar { margin-bottom: 14px; }
+
+.programat-item { cursor: default; }
+.programat-item:hover { border-color: var(--border); background: none; }
+.programat-info { min-width: 0; flex: 1; }
+.programat-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+.programat-estat { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.programat-pendent { background: rgba(217, 119, 6, 0.15); color: #d97706; }
+.programat-enviat { background: rgba(22, 163, 74, 0.15); color: var(--success); }
+.programat-error { background: rgba(220, 38, 38, 0.15); color: var(--danger); }
+
 .notice {
   background: var(--surface);
   border: 1px dashed var(--border);

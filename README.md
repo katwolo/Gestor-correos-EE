@@ -149,6 +149,13 @@ Cada dia a les **8:00** s'executa automàticament la funció `enviament` (el mat
 
 Aquest mateix mecanisme de trigger diari és el que processa, l'endemà o quan toqui, els enviaments que s'han programat amb data futura des del pas 5 de l'assistent.
 
+### Veure, editar o cancel·lar els correus programats
+
+A sobre de l'assistent hi ha el botó **"📅 Veure correus programats"**, que mostra tot el contingut del full "Programats" (`getProgramats`): alumne/a, plantilla, data prevista i estat (**Pendent** / **Enviat** / **Error: ...**).
+
+- Els que encara estan **Pendents** es poden **editar** (✏️, per canviar la data prevista — `updateProgramat`) o **eliminar** (🗑️, amb confirmació — `deleteProgramat`, cancel·la l'enviament esborrant la fila del full).
+- Els que ja s'han **enviat** o han donat **error** es mostren només de lectura (no té sentit reprogramar-los des d'aquí); per reintentar-ne un que ha fallat, torna a fer-lo des de l'assistent.
+
 ### Sincronització amb els 3 blocs clàssics
 
 Si el nom d'una plantilla enviada (des de la web o pel trigger) coincideix —ignorant accents, majúscules i espais— amb "Contacte inicial", "Seguiment" o "Valoració final", en enviar-se correctament es **desmarca la casella i s'hi estampa la data** a les columnes clàssiques d'"Enviament" (E-P), exactament igual que si s'hagués marcat i disparat des del propi Sheet. Així la web i el flux antic (menú "Enviaments" del propi Sheet) es mantenen coherents encara que es facin servir barrejats.
