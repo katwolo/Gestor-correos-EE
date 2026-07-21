@@ -72,7 +72,7 @@ La barra omple `(índex_fase + 1) / 5`. Una cel·la buida es tracta com "(Penden
 
 ### Cercador d'alumnes
 
-Sota la llista de targetes hi ha un camp de cerca per nom. Filtra en temps real i es pot combinar amb el filtre d'una tile (p. ex. "Actius" + escriure un nom per trobar-lo ràpid dins d'aquell subconjunt).
+Al costat del títol "Alumnat" hi ha un camp de cerca per nom. Filtra en temps real la llista de targetes de sota i es pot combinar amb el filtre d'una tile (p. ex. "Actius" + escriure un nom per trobar-lo ràpid dins d'aquell subconjunt).
 
 ---
 

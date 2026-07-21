@@ -202,7 +202,15 @@ html, body {
 .tile-clickable:active { transform: scale(0.98); }
 .tile-active { border-color: var(--primary); border-width: 2px; box-shadow: 0 0 0 1px var(--primary); }
 
-#dashboard-cerca-alumne { margin-top: 14px; }
+.dashboard-students-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dashboard-students-header h2 { margin: 0; }
+#dashboard-cerca-alumne { flex: 1; max-width: 260px; margin-bottom: 0; }
 
 /* ---- Student list ---- */
 
