@@ -649,12 +649,13 @@ const ROSTER_COLUMNS = [
   { header: 'Excel inserció laboral', tipus: 'select', opcions: ['Fet'] },
   { header: 'Enquesta inserció laboral', tipus: 'select', opcions: ['Fet'] },
   { header: 'Observacions', tipus: 'text' },
-  { header: 'Mail tutor/a empresa', tipus: 'text' },
-  { header: 'Mòbil tutor/a empresa', tipus: 'text' },
-  { header: 'Hores realitzades', tipus: 'text' }
+  { header: 'Hores realitzades', tipus: 'text' },
+  { header: 'Mòbil tutor/a empresa', tipus: 'text' }
 ];
-// Índexs 0-based per llegibilitat al codi de sota.
-const ROSTER_IDX = { NOM: 0, MAIL: 1, PRACTIQUES: 2, ACORD: 12, EXEMPCIO: 14, CONTACTES: 15, QUADERN: 20, NOTA_FINAL: 21, HORES: 30 };
+// Índexs 0-based per llegibilitat al codi de sota. Columna AC (índex 28) es
+// fa servir per a les hores realitzades de cada conveni (abans "Mail
+// tutor/a empresa", reaprofitada).
+const ROSTER_IDX = { NOM: 0, MAIL: 1, PRACTIQUES: 2, ACORD: 12, EXEMPCIO: 14, CONTACTES: 15, QUADERN: 20, NOTA_FINAL: 21, HORES: 28 };
 
 // Hores totals de quadern que ha de fer un alumne sense cap exempció.
 const HORES_QUADERN_TOTAL = 515;

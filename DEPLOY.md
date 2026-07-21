@@ -9,7 +9,7 @@ L'accés a la web es protegeix amb una contrasenya simple que tu tries (Script P
 
 **Important**: el projecte fa servir **dos Google Sheets diferents**, cadascun amb la seva pròpia caixa d'enllaç a la web (es desen per separat al navegador):
 
-1. **Excel oficial** (secció Dashboard + Excel oficial): el teu full real de seguiment de l'alumnat (p. ex. "2n EAS A 24-25..."). Només es fa servir la **primera pestanya**, sigui quin sigui el seu nom — la resta de pestanyes (INSTRUCCIONS, EMPRESES, etc.) s'ignoren. Aquest full necessita una columna extra al final anomenada **"Hores realitzades"** (una per conveni/fila) perquè el Dashboard pugui sumar-les cap a les 515h totals del quadern — si no existeix encara, crea-la tu mateix a la primera fila lliure després de "Mòbil tutor/a empresa"; la web ja la deixa editar encara que la capçalera surti en blanc la primera vegada.
+1. **Excel oficial** (secció Dashboard + Excel oficial): el teu full real de seguiment de l'alumnat (p. ex. "2n EAS A 24-25..."). Només es fa servir la **primera pestanya**, sigui quin sigui el seu nom — la resta de pestanyes (INSTRUCCIONS, EMPRESES, etc.) s'ignoren. La columna **AC** (29a) s'utilitza per anotar les **hores realitzades a cada conveni** (una xifra per fila), perquè el Dashboard les sumi cap a les 515h totals del quadern.
 2. **Enviar correus**: el full amb els fulls "Enviament"/"Plantilles"/"Registre" per disparar correus amb plantilles.
 
 El projecte d'Apps Script només s'ha de lligar a **un** dels dos Sheets (normalment el d'"Enviar correus", ja que és el que necessita el trigger diari); l'altre es referencia només pel seu `sheetId` des de la web, sense necessitat de cap script propi.
