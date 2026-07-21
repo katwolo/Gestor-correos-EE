@@ -202,6 +202,8 @@ html, body {
 .tile-clickable:active { transform: scale(0.98); }
 .tile-active { border-color: var(--primary); border-width: 2px; box-shadow: 0 0 0 1px var(--primary); }
 
+#dashboard-cerca-alumne { margin-top: 14px; }
+
 /* ---- Student list ---- */
 
 .student-list { display: flex; flex-direction: column; gap: 8px; }

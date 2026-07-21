@@ -25,6 +25,7 @@ const App = (function () {
 
   function onAuthenticated() {
     if (!modulesInitialized) {
+      Dashboard.init();
       Excel.init();
       Correus.init();
       modulesInitialized = true;

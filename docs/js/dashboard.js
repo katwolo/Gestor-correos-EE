@@ -23,24 +23,38 @@ const Dashboard = (function () {
 
   let alumnesActuals = [];
   let filtreActiu = null;
+  let cercaText = '';
+
+  function init() {
+    const input = document.getElementById('dashboard-cerca-alumne');
+    input.addEventListener('input', Util.debounce(function (ev) {
+      cercaText = ev.target.value;
+      renderStudents(document.getElementById('dashboard-students'));
+    }, 150));
+  }
 
   async function load() {
     const wrap = document.getElementById('dashboard-no-sheet');
     const tiles = document.getElementById('dashboard-tiles');
     const students = document.getElementById('dashboard-students');
+    const cerca = document.getElementById('dashboard-cerca-alumne');
 
     if (!State.getSheetIdOficial()) {
       wrap.classList.remove('hidden');
       tiles.innerHTML = '';
       students.innerHTML = '';
+      cerca.classList.add('hidden');
       return;
     }
     wrap.classList.add('hidden');
+    cerca.classList.remove('hidden');
 
     try {
       const data = await Api.call('getDashboard', { sheetId: State.getSheetIdOficial() });
       alumnesActuals = data.alumnes;
       filtreActiu = null;
+      cercaText = '';
+      cerca.value = '';
       renderTiles(tiles, data.tiles);
       renderStudents(students);
     } catch (err) {
@@ -73,7 +87,12 @@ const Dashboard = (function () {
 
   function renderStudents(container) {
     const predicate = filtreActiu ? TILE_FILTERS[filtreActiu] : null;
-    const llista = predicate ? alumnesActuals.filter(predicate) : alumnesActuals;
+    const cerca = cercaText.trim().toLowerCase();
+    const llista = alumnesActuals.filter(function (a) {
+      if (predicate && !predicate(a)) return false;
+      if (cerca && a.nom.toLowerCase().indexOf(cerca) === -1) return false;
+      return true;
+    });
 
     let capçalera = '';
     if (filtreActiu) {
@@ -126,13 +145,14 @@ const Dashboard = (function () {
     return renderProgressBar(pct, pct >= 100 ? 'progress-done' : 'progress-hores', Util.escapeHtml(label));
   }
 
-  // Barra 2: en quina fase està el conveni actual (l'últim), segons
-  // "Contactes amb l'empresa" (No he fet → Inicial → Seguiment → Valoració).
+  // Barra 2: en quin punt està l'"Acord (ref05) i pla activitats (ref06)"
+  // del conveni actual ((Pendent) → Falta → Entregat → Rebut de coord FCT →
+  // Enviat alumne/empresa).
   function renderFaseBar(a) {
     const pct = ((a.faseConveniIndex + 1) / a.faseConveniTotal) * 100;
-    const label = 'Conveni actual: ' + a.faseConveni;
+    const label = 'Acord (ref05/06): ' + a.faseConveni;
     return renderProgressBar(pct, 'progress-fase', Util.escapeHtml(label));
   }
 
-  return { load: load };
+  return { init: init, load: load };
 })();

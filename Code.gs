@@ -701,11 +701,14 @@ const ROSTER_COLUMNS = [
 // Índexs 0-based per llegibilitat al codi de sota. Columna AC (índex 28) es
 // fa servir per a les hores realitzades de cada conveni (abans "Mail
 // tutor/a empresa", reaprofitada).
-const ROSTER_IDX = { NOM: 0, MAIL: 1, PRACTIQUES: 2, ACORD: 12, EXEMPCIO: 14, CONTACTES: 15, QUADERN: 20, NOTA_FINAL: 21, HORES: 28 };
+const ROSTER_IDX = { NOM: 0, MAIL: 1, PRACTIQUES: 2, ACORD: 12, EXEMPCIO: 14, QUADERN: 20, NOTA_FINAL: 21, HORES: 28 };
 
 // Hores totals de quadern que ha de fer un alumne sense cap exempció.
 const HORES_QUADERN_TOTAL = 515;
-const FASES_CONVENI = ['No he fet', 'Inicial', 'Seguiment', 'Valoració'];
+
+// Fases de la barra "Acord (ref05) i pla activitats (ref06)" (columna ACORD),
+// en l'ordre en què avança el tràmit. Una cel·la buida es tracta com a fase 0.
+const FASES_ACORD = ['(Pendent)', 'Falta', 'Entregat', 'Rebut de coord FCT', 'Enviat alumne/empresa'];
 
 function obtenirFullRoster_(ss) {
   const fulls = ss.getSheets();
@@ -819,12 +822,14 @@ function parseExempcioPercent_(valor) {
   return match ? Number(match[1]) : 0;
 }
 
-function calcularFaseConveni_(valor) {
-  const idx = FASES_CONVENI.indexOf(valor);
+// Fase de la barra "Acord (ref05) i pla activitats (ref06)" a partir del
+// valor de la columna ACORD (buit = fase 0, "(Pendent)").
+function calcularFaseAcord_(valor) {
+  const idx = FASES_ACORD.indexOf(valor);
   return {
-    etiqueta: idx === -1 ? (valor || FASES_CONVENI[0]) : valor,
+    etiqueta: idx === -1 ? (valor || FASES_ACORD[0]) : valor,
     index: idx === -1 ? 0 : idx,
-    total: FASES_CONVENI.length
+    total: FASES_ACORD.length
   };
 }
 
@@ -861,7 +866,7 @@ function obtenirDashboardRoster_(ss) {
     const horesObjectiu = HORES_QUADERN_TOTAL * (1 - percentExempcio / 100);
     const horesFetes = g.totalHores;
     const horesPendents = Math.max(0, horesObjectiu - horesFetes);
-    const fase = calcularFaseConveni_(row[ROSTER_IDX.CONTACTES]);
+    const fase = calcularFaseAcord_(acord);
 
     return {
       primeraFila: g.primeraFila,

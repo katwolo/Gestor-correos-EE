@@ -62,13 +62,17 @@ Cada targeta d'alumne mostra dues barres, una sota l'altra:
 - Les **hores fetes** són la suma calculada abans (`totalHores`, sumant la columna AC de tots els convenis de l'alumne).
 - La barra mostra "fetes / objectiu" i, si en falten, "falten Xh"; en arribar al 100% es marca com a completa (color diferent).
 
-**2) Barra "Conveni actual"** — en quina fase de contacte està el conveni **més recent** (l'última fila del grup), segons la columna "Contactes amb l'empresa":
+**2) Barra "Acord (ref05/06)"** — en quin punt està el tràmit d'acord i pla d'activitats del conveni **més recent** (l'última fila del grup), segons la columna "Acord (ref05) i pla activitats (ref06)":
 
 ```
-No he fet  →  Inicial  →  Seguiment  →  Valoració
+(Pendent)  →  Falta  →  Entregat  →  Rebut de coord FCT  →  Enviat alumne/empresa
 ```
 
-La barra omple `(índex_fase + 1) / 4`. Si la cel·la té un valor no reconegut (o buida), es tracta com "No he fet" (fase 0). **Important**: aquesta fase és sempre la del **conveni actiu més recent**, no un resum de tots els convenis — si un alumne ja ha tancat un primer conveni i n'ha començat un segon, la barra reflecteix el segon.
+La barra omple `(índex_fase + 1) / 5`. Una cel·la buida es tracta com "(Pendent)" (fase 0); un valor no reconegut fa el mateix. **Important**: aquesta fase és sempre la del **conveni més recent**, no un resum de tots els convenis — si un alumne ja ha tancat un primer conveni i n'ha començat un segon, la barra reflecteix el segon.
+
+### Cercador d'alumnes
+
+Sota la llista de targetes hi ha un camp de cerca per nom. Filtra en temps real i es pot combinar amb el filtre d'una tile (p. ex. "Actius" + escriure un nom per trobar-lo ràpid dins d'aquell subconjunt).
 
 ---
 
