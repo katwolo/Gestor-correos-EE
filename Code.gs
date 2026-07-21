@@ -650,10 +650,15 @@ const ROSTER_COLUMNS = [
   { header: 'Enquesta inserció laboral', tipus: 'select', opcions: ['Fet'] },
   { header: 'Observacions', tipus: 'text' },
   { header: 'Mail tutor/a empresa', tipus: 'text' },
-  { header: 'Mòbil tutor/a empresa', tipus: 'text' }
+  { header: 'Mòbil tutor/a empresa', tipus: 'text' },
+  { header: 'Hores realitzades', tipus: 'text' }
 ];
 // Índexs 0-based per llegibilitat al codi de sota.
-const ROSTER_IDX = { NOM: 0, MAIL: 1, PRACTIQUES: 2, ACORD: 12, EXEMPCIO: 14, QUADERN: 20, NOTA_FINAL: 21 };
+const ROSTER_IDX = { NOM: 0, MAIL: 1, PRACTIQUES: 2, ACORD: 12, EXEMPCIO: 14, CONTACTES: 15, QUADERN: 20, NOTA_FINAL: 21, HORES: 30 };
+
+// Hores totals de quadern que ha de fer un alumne sense cap exempció.
+const HORES_QUADERN_TOTAL = 515;
+const FASES_CONVENI = ['No he fet', 'Inicial', 'Seguiment', 'Valoració'];
 
 function obtenirFullRoster_(ss) {
   const fulls = ss.getSheets();
@@ -705,10 +710,24 @@ function inserirFilaRoster_(ss, payload) {
 // repeteixen el nom (p.ex. en afegir manualment una fila nova). El grup sempre
 // fa servir la fila més avall (l'última introduïda) com a "estat" actual, de
 // manera que només el conveni més recent compta com a actiu/finalitzat.
+function parseHores_(valor) {
+  if (valor === '' || valor === null || valor === undefined) return 0;
+  const net = String(valor).replace(',', '.').replace(/[^0-9.\-]/g, '');
+  const n = parseFloat(net);
+  return isNaN(n) ? 0 : n;
+}
+
 function agruparAlumnesRoster_(files, primeraFilaNum) {
   const grups = [];
   const indexPerNom = {};
   let grupActual = null;
+
+  function afegirFilaAlGrup_(g, row, filaNum) {
+    g.ultimaFila = filaNum;
+    g.estat = row;
+    g.totalHores += parseHores_(row[ROSTER_IDX.HORES]);
+    if (teExempcio_(row[ROSTER_IDX.EXEMPCIO])) g.exempcio = row[ROSTER_IDX.EXEMPCIO];
+  }
 
   files.forEach(function (row, i) {
     const filaNum = primeraFilaNum + i;
@@ -719,16 +738,17 @@ function agruparAlumnesRoster_(files, primeraFilaNum) {
       const clau = nomFila.toLowerCase();
       if (Object.prototype.hasOwnProperty.call(indexPerNom, clau)) {
         grupActual = grups[indexPerNom[clau]];
-        grupActual.ultimaFila = filaNum;
-        grupActual.estat = row;
+        afegirFilaAlGrup_(grupActual, row, filaNum);
       } else {
-        grupActual = { primeraFila: filaNum, ultimaFila: filaNum, nom: row[ROSTER_IDX.NOM], mail: row[ROSTER_IDX.MAIL], estat: row };
+        grupActual = {
+          primeraFila: filaNum, ultimaFila: filaNum, nom: row[ROSTER_IDX.NOM], mail: row[ROSTER_IDX.MAIL],
+          estat: row, totalHores: parseHores_(row[ROSTER_IDX.HORES]), exempcio: row[ROSTER_IDX.EXEMPCIO]
+        };
         indexPerNom[clau] = grups.length;
         grups.push(grupActual);
       }
     } else if (grupActual && teContingut) {
-      grupActual.ultimaFila = filaNum;
-      grupActual.estat = row;
+      afegirFilaAlGrup_(grupActual, row, filaNum);
     } else if (!teContingut) {
       grupActual = null;
     }
@@ -741,6 +761,24 @@ function agruparAlumnesRoster_(files, primeraFilaNum) {
 // de "No aplica" (sol·licitud enviada, un percentatge concedit o denegada).
 function teExempcio_(valor) {
   return !!valor && valor !== 'No aplica';
+}
+
+// Només "25%"/"50%"/"100%" redueixen l'objectiu d'hores; "Sol.licitud enviada"
+// i "Negativa" es tracten com a 0% (l'objectiu es manté a 515h) fins que
+// quedi confirmat un percentatge concret.
+function parseExempcioPercent_(valor) {
+  if (!valor) return 0;
+  const match = String(valor).match(/(\d+)\s*%/);
+  return match ? Number(match[1]) : 0;
+}
+
+function calcularFaseConveni_(valor) {
+  const idx = FASES_CONVENI.indexOf(valor);
+  return {
+    etiqueta: idx === -1 ? (valor || FASES_CONVENI[0]) : valor,
+    index: idx === -1 ? 0 : idx,
+    total: FASES_CONVENI.length
+  };
 }
 
 function obtenirDashboardRoster_(ss) {
@@ -760,7 +798,7 @@ function obtenirDashboardRoster_(ss) {
     const notaFinal = row[ROSTER_IDX.NOTA_FINAL];
     const acord = row[ROSTER_IDX.ACORD];
     const quadern = row[ROSTER_IDX.QUADERN];
-    const exempcio = row[ROSTER_IDX.EXEMPCIO];
+    const exempcio = g.exempcio;
     const teExempcioActiva = teExempcio_(exempcio);
 
     const finalitzat = !!notaFinal;
@@ -771,6 +809,12 @@ function obtenirDashboardRoster_(ss) {
     else if (actiu) actius++;
     if (actiu && faltaDocument) pendentsDocumentacio++;
     if (teExempcioActiva) ambExempcio++;
+
+    const percentExempcio = parseExempcioPercent_(exempcio);
+    const horesObjectiu = HORES_QUADERN_TOTAL * (1 - percentExempcio / 100);
+    const horesFetes = g.totalHores;
+    const horesPendents = Math.max(0, horesObjectiu - horesFetes);
+    const fase = calcularFaseConveni_(row[ROSTER_IDX.CONTACTES]);
 
     return {
       primeraFila: g.primeraFila,
@@ -786,7 +830,13 @@ function obtenirDashboardRoster_(ss) {
       teExempcio: teExempcioActiva,
       finalitzat: finalitzat,
       actiu: actiu,
-      faltaDocument: faltaDocument
+      faltaDocument: faltaDocument,
+      horesFetes: horesFetes,
+      horesObjectiu: horesObjectiu,
+      horesPendents: horesPendents,
+      faseConveni: fase.etiqueta,
+      faseConveniIndex: fase.index,
+      faseConveniTotal: fase.total
     };
   });
 

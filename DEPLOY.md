@@ -9,7 +9,7 @@ L'accés a la web es protegeix amb una contrasenya simple que tu tries (Script P
 
 **Important**: el projecte fa servir **dos Google Sheets diferents**, cadascun amb la seva pròpia caixa d'enllaç a la web (es desen per separat al navegador):
 
-1. **Excel oficial** (secció Dashboard + Excel oficial): el teu full real de seguiment de l'alumnat (p. ex. "2n EAS A 24-25..."). Només es fa servir la **primera pestanya**, sigui quin sigui el seu nom — la resta de pestanyes (INSTRUCCIONS, EMPRESES, etc.) s'ignoren.
+1. **Excel oficial** (secció Dashboard + Excel oficial): el teu full real de seguiment de l'alumnat (p. ex. "2n EAS A 24-25..."). Només es fa servir la **primera pestanya**, sigui quin sigui el seu nom — la resta de pestanyes (INSTRUCCIONS, EMPRESES, etc.) s'ignoren. Aquest full necessita una columna extra al final anomenada **"Hores realitzades"** (una per conveni/fila) perquè el Dashboard pugui sumar-les cap a les 515h totals del quadern — si no existeix encara, crea-la tu mateix a la primera fila lliure després de "Mòbil tutor/a empresa"; la web ja la deixa editar encara que la capçalera surti en blanc la primera vegada.
 2. **Enviar correus**: el full amb els fulls "Enviament"/"Plantilles"/"Registre" per disparar correus amb plantilles.
 
 El projecte d'Apps Script només s'ha de lligar a **un** dels dos Sheets (normalment el d'"Enviar correus", ja que és el que necessita el trigger diari); l'altre es referencia només pel seu `sheetId` des de la web, sense necessitat de cap script propi.
@@ -68,8 +68,8 @@ Al repositori de GitHub: **Settings → Pages → Source: Deploy from a branch �
 1. Obre la URL de Pages → surt la pantalla demanant la contrasenya.
 2. Introdueix la contrasenya correcta (`APP_PASSWORD`) → hauria d'aparèixer el panell principal.
 3. Prova amb una contrasenya incorrecta → ha de sortir "Contrasenya incorrecta", no una pantalla en blanc.
-4. A "Excel oficial", enganxa l'enllaç del teu Excel oficial de seguiment → han d'aparèixer les dades del dashboard (incloent el rètol "Amb exempció de pràctiques") i la graella (respecta la primera pestanya).
-5. Edita una cel·la de prova a la graella (p. ex. una llista desplegable com "Contactes amb l'empresa") → comprova que el canvi es reflecteix al Sheet real.
+4. A "Excel oficial", enganxa l'enllaç del teu Excel oficial de seguiment → han d'aparèixer les dades del dashboard (incloent el rètol "Amb exempció de pràctiques") i la graella (respecta la primera pestanya). A cada targeta d'alumne han de sortir dues barres: hores del quadern (515h, o menys si té exempció) i la fase del conveni actual ("Contactes amb l'empresa").
+5. Edita una cel·la de prova a la graella (p. ex. una llista desplegable com "Contactes amb l'empresa", o un número a "Hores realitzades") → comprova que el canvi es reflecteix al Sheet real i que les barres del Dashboard es recalculen.
 6. Prova el botó "+ fila" d'una fila → ha d'aparèixer una fila nova buida just a sota al Sheet real (per afegir un segon conveni del mateix alumne, deixant el nom en blanc).
 7. A "Enviar correus", enganxa l'enllaç del Sheet d'enviament (diferent de l'anterior) i segueix l'assistent: alumne/a → tutor/a (comprova que es pot editar i desar el nom/correu del tutor/a) → plantilles (marca'n més d'una, prova "✏️" per editar-ne una i comprova que es desa al Sheet) → adjunts → confirmar. Marca una plantilla sense data (s'ha d'enviar a l'instant) i una altra amb una data futura (ha d'aparèixer al full nou "Programats" amb estat "Pendent"). Comprova que `Registre` registra `Estat=OK` per la que s'envia ara, i que si coincideix amb un dels 3 blocs clàssics, la casella/data del Sheet s'actualitzen soles.
 8. Prova un enviament amb un adjunt de Drive invàlid barrejat amb un de vàlid → el correu ha d'arribar amb l'adjunt vàlid, no sense cap.
