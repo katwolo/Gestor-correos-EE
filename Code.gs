@@ -27,7 +27,7 @@ const BLOCS = [
   { casella: 12, plantilla: 13, adjunt: 14, data: 15 } // Bloc 3 "Valoració final" (M-P)
 ];
 
-const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'insertRow', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat'];
+const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'insertRow', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat', 'processarEnviamentsAra'];
 
 // Mapa de visualització (Plantilles!C fa servir aquest text amb majúscules/accents;
 // cargarPlantilles_ ho normalitza tot a minúscules per fer-hi coincidències).
@@ -213,6 +213,18 @@ function processarEnviaments_(ss) {
   problemes.push.apply(problemes, problemesProgramats);
 
   if (problemes.length) notificarProblemes_(problemes);
+  return { problemes: problemes };
+}
+
+// Acció manual des de la web: força ara mateix el mateix processament que fa
+// el trigger diari (blocs clàssics "Enviament" + cua "Programats"), però
+// sobre el sheetId exacte que hi ha enganxat al navegador. Útil per no haver
+// d'esperar a les 8:00, i també com a "xarxa de seguretat" si el projecte
+// d'Apps Script no estigués lligat exactament a aquest mateix full (el
+// trigger fa servir SpreadsheetApp.getActiveSpreadsheet(), que és sempre el
+// full on està lligat el projecte, no el sheetId triat a la web).
+function accioProcessarEnviamentsAra_(ss) {
+  return processarEnviaments_(ss);
 }
 
 // Envia una plantilla a un alumne (assumpte/cos generats a partir dels
@@ -982,6 +994,7 @@ function executarAccio_(accio, payload, ss) {
     case 'getProgramats': return obtenirProgramats_(ss);
     case 'updateProgramat': return actualitzarProgramat_(ss, payload);
     case 'deleteProgramat': return eliminarProgramat_(ss, payload);
+    case 'processarEnviamentsAra': return accioProcessarEnviamentsAra_(ss);
     case 'configurarFull': return { canvis: configurarFullEnviament_(ss) };
     case 'getRegistre': return obtenirRegistre_(ss, payload.limit);
     default: { const e = new Error('Acció desconeguda: ' + accio); e.code = 'UNKNOWN_ACTION'; throw e; }

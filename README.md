@@ -153,12 +153,15 @@ Cada dia a les **8:00** s'executa automàticament la funció `enviament` (el mat
 
 Aquest mateix mecanisme de trigger diari és el que processa, l'endemà o quan toqui, els enviaments que s'han programat amb data futura des del pas 5 de l'assistent.
 
-### Veure, editar o cancel·lar els correus programats
+**Important**: el trigger diari només s'executa sobre el Sheet on estigui **físicament lligat el projecte d'Apps Script** (`SpreadsheetApp.getActiveSpreadsheet()`) — és a dir, el Sheet des del qual vas obrir **Extensions → Apps Script** la primera vegada. Si l'enllaç que tens enganxat a la web d'"Enviar correus" apunta a una còpia diferent d'aquell mateix Sheet (p. ex. perquè n'has duplicat un per a un curs nou i encara no has actualitzat res), el trigger mai veurà els correus que programis des de la web, encara que apareguin correctament al full "Programats" — es quedaran "Pendents" per sempre, sense error. Comprova-ho a l'editor d'Apps Script (**Activadors**, icona de rellotge) que el projecte és el correcte.
+
+### Veure, editar, cancel·lar o forçar l'enviament dels correus programats
 
 A sobre de l'assistent hi ha el botó **"📅 Veure correus programats"**, que mostra tot el contingut del full "Programats" (`getProgramats`): alumne/a, plantilla, data prevista i estat (**Pendent** / **Enviat** / **Error: ...**).
 
 - Els que encara estan **Pendents** es poden **editar** (✏️, per canviar la data prevista — `updateProgramat`) o **eliminar** (🗑️, amb confirmació — `deleteProgramat`, cancel·la l'enviament esborrant la fila del full).
 - Els que ja s'han **enviat** o han donat **error** es mostren només de lectura (no té sentit reprogramar-los des d'aquí); per reintentar-ne un que ha fallat, torna a fer-lo des de l'assistent.
+- Si hi ha algun pendent, apareix el botó **"▶ Processa els pendents ara"**: força el mateix processament que fa el trigger diari (blocs clàssics + cua "Programats"), però **directament sobre el sheetId enganxat al navegador**, sense dependre de si el trigger ja ha passat ni de a quin Sheet estigui lligat el projecte d'Apps Script. És la manera més ràpida de comprovar per què un correu "d'avui" encara no ha sortit: prem el botó i mira el missatge de resultat (si hi ha alguna incidència, es mostra allà mateix, en lloc de només al correu-resum de `TEACHER_NOTIFY_EMAIL`).
 
 ### Sincronització amb els 3 blocs clàssics
 

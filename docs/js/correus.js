@@ -231,9 +231,15 @@ const Correus = (function () {
     const rows = programats.length
       ? programats.map(renderProgramatItem).join('')
       : '<p class="hint-text">No hi ha cap correu programat.</p>';
+    const hiHaPendents = programats.some(function (p) { return p.estat === 'Pendent'; });
     return '<div class="wizard-card">' +
       '<button id="w-tancar-programats" class="btn-link wizard-back">← Torna a l\'assistent</button>' +
       '<h3>Correus programats</h3>' +
+      (hiHaPendents
+        ? '<p class="hint-text">Els pendents s\'envien automàticament cada dia a les 8:00. Si un ja hauria de sortir i no vols esperar, prem aquest botó.</p>' +
+          '<button id="w-processar-ara" class="btn-primary">▶ Processa els pendents ara</button>'
+        : '') +
+      '<p id="w-processar-resultat" class="hint-text"></p>' +
       '<div class="wizard-list programats-list">' + rows + '</div>' +
       '</div>';
   }
@@ -268,6 +274,9 @@ const Correus = (function () {
   function wireProgramatsEvents() {
     const tancarBtn = document.getElementById('w-tancar-programats');
     if (tancarBtn) tancarBtn.addEventListener('click', function () { vistaProgramats = false; render(); });
+
+    const processarBtn = document.getElementById('w-processar-ara');
+    if (processarBtn) processarBtn.addEventListener('click', onProcessarAra);
 
     document.querySelectorAll('[data-editar-prog]').forEach(function (el) {
       el.addEventListener('click', function () { programatEditant = Number(el.dataset.editarProg); render(); });
@@ -320,6 +329,27 @@ const Correus = (function () {
       await carregarProgramats();
     } catch (err) {
       Util.showToast('No s\'ha pogut eliminar: ' + err.message, 'error');
+    }
+  }
+
+  // Força ara mateix el mateix processament que fa el trigger diari
+  // (blocs clàssics + cua "Programats"), sense esperar a les 8:00.
+  async function onProcessarAra() {
+    const btn = document.getElementById('w-processar-ara');
+    const resultatEl = document.getElementById('w-processar-resultat');
+    btn.disabled = true;
+    resultatEl.textContent = 'Processant...';
+    try {
+      const data = await Api.call('processarEnviamentsAra', { sheetId: State.getSheetIdCorreus() });
+      const problemes = data.problemes || [];
+      resultatEl.textContent = problemes.length ? ('Fet amb incidències: ' + problemes.join(' | ')) : 'Fet: cap incidència.';
+      Util.showToast(problemes.length ? 'Processat amb incidències' : 'Correus processats', problemes.length ? 'error' : undefined);
+      await carregarProgramats();
+    } catch (err) {
+      resultatEl.textContent = 'Error: ' + err.message;
+      Util.showToast('No s\'ha pogut processar: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
     }
   }
 
