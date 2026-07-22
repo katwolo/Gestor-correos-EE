@@ -827,11 +827,20 @@ function teExempcio_(valor) {
 
 // Només "25%"/"50%"/"100%" redueixen l'objectiu d'hores; "Sol.licitud enviada"
 // i "Negativa" es tracten com a 0% (l'objectiu es manté a 515h) fins que
-// quedi confirmat un percentatge concret.
+// quedi confirmat un percentatge concret. Admet tant text amb "%" (p. ex. la
+// nostra pròpia graella) com un número cru: si la cel·la de l'Excel oficial
+// té format de percentatge de Google Sheets, getValues() en retorna el valor
+// subjacent (0.25) i no el text mostrat ("25%"), així que cal interpretar-lo
+// igualment.
 function parseExempcioPercent_(valor) {
-  if (!valor) return 0;
-  const match = String(valor).match(/(\d+)\s*%/);
-  return match ? Number(match[1]) : 0;
+  if (valor === '' || valor === null || valor === undefined) return 0;
+  if (typeof valor === 'number') return valor <= 1 ? valor * 100 : valor;
+  const text = String(valor).trim();
+  const ambPercent = text.match(/(\d+(?:[.,]\d+)?)\s*%/);
+  if (ambPercent) return Number(ambPercent[1].replace(',', '.'));
+  const num = Number(text.replace(',', '.'));
+  if (text !== '' && !isNaN(num)) return num <= 1 ? num * 100 : num;
+  return 0;
 }
 
 // Fase de la barra "Acord (ref05) i pla activitats (ref06)" a partir del
