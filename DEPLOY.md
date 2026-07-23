@@ -34,6 +34,7 @@ A **Configuració del projecte → Propietats de l'script**, afegeix:
 | Propietat | Valor |
 |---|---|
 | `APP_PASSWORD` | La contrasenya que triïs per entrar a la web (només l'has de saber tu) |
+| `ENVIAMENT_SHEET_ID` | **Important**: l'ID del full d'"Enviar correus" (la part de l'URL entre `/d/` i `/edit`) — ha de ser exactament el mateix full que tens enganxat a la web. Sense això, el trigger diari fa servir el full al qual estigui lligat el projecte, que podria no coincidir |
 | `TEACHER_NOTIFY_EMAIL` | (opcional) email on rebre l'avís si algun enviament de correu falla |
 
 ## 4. Executa la configuració inicial

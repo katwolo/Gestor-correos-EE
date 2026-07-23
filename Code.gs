@@ -122,8 +122,27 @@ function crearTriggerCadaDia_8h() {
 
 // ==== ENVIAMENT (camí legacy: trigger diari / menú "Enviar ara") ====
 
+// El trigger diari no ha de dependre de "a quin Sheet està físicament lligat
+// el projecte" (SpreadsheetApp.getActiveSpreadsheet()) — si el projecte
+// s'hagués lligat a una còpia diferent del full d'"Enviar correus" del que
+// fas servir realment a la web, el trigger s'executaria sense error però
+// mirant un full equivocat, sense enviar res i sense que es noti enlloc.
+// Per evitar-ho, es fa servir explícitament l'Script Property
+// ENVIAMENT_SHEET_ID (el mateix sheetId que tens enganxat a la web); si no
+// està configurada, es manté el comportament antic com a compatibilitat.
+function obtenirSpreadsheetEnviament_() {
+  const id = PropertiesService.getScriptProperties().getProperty('ENVIAMENT_SHEET_ID');
+  if (id) return SpreadsheetApp.openById(id);
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
 function enviament() {
-  processarEnviaments_(SpreadsheetApp.getActiveSpreadsheet());
+  try {
+    processarEnviaments_(obtenirSpreadsheetEnviament_());
+  } catch (err) {
+    notificarProblemes_(['El trigger diari ha fallat abans de poder processar res: ' + err.message]);
+    throw err;
+  }
 }
 
 // El full "Enviament" pot no tenir encara físicament columnes fins la P (p.ex.
