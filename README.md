@@ -86,6 +86,16 @@ Graella editable directament sobre la primera pestanya de l'Excel oficial (`getS
 
 No hi ha cap "configuració" que calgui executar sobre aquest Sheet: l'app hi llegeix/escriu directament respectant la seva pròpia estructura de 29 columnes.
 
+### Començar des d'un Google Sheets nou i buit
+
+Si enganxes l'enllaç d'un Google Sheets completament nou (sense capçaleres ni dades), en lloc de la graella apareix un avís amb el botó **"🆕 Preparar aquest full nou per a l'ús amb la web"** (`configurarFullOficial`). En prémer'l:
+
+- Escriu les 29 capçaleres de `ROSTER_COLUMNS` a la fila 2.
+- Aplica els desplegables natius de Google Sheets a les columnes de tipus `select` (per si mai obres el full directament — la web sempre fa servir el seu propi desplegable i no en depèn).
+- Afegeix una primera fila buida (fila 3) perquè ja hi hagi on prémer "+" i començar a introduir alumnat.
+
+És idempotent i **no toca res si el full ja té capçaleres o dades**: només pensat per arrencar un full en blanc, mai per "reparar" un full real ja en ús.
+
 ---
 
 ## 3. Enviar correus
@@ -170,6 +180,10 @@ Si el nom d'una plantilla enviada (des de la web o pel trigger) coincideix —ig
 ### Registre
 
 Cada intent d'enviament (èxit o error, un per destinatari) queda enregistrat al full **"Registre"**: data, hora, destinatari, assumpte, plantilla usada i estat ("OK" o "ERROR: ..."). És només de lectura des de la web (no hi ha cap acció per editar-lo); serveix d'historial per revisar qui ha rebut què i quan.
+
+### Començar des d'un Google Sheets nou i buit
+
+Igual que a "Excel oficial", si enganxes l'enllaç d'un Sheet completament nou i sense cap plantilla, apareix un avís amb el botó **"🆕 Preparar aquest full nou per a l'ús amb la web"** (reutilitza `configurarFullEnviament_`): crea els fulls "Enviament"/"Plantilles"/"Registre" si no existeixen, hi escriu les capçaleres i 3 plantilles d'exemple, i deixa l'assumpte base amb `{{anyAcademic}}`. També es pot llançar manualment des de l'editor d'Apps Script (funció `configurarFullEnviament`) — fa exactament el mateix.
 
 ---
 

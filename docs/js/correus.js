@@ -15,6 +15,7 @@ const Correus = (function () {
   function init() {
     document.getElementById('correus-sheet-link-save').addEventListener('click', onSaveLink);
     document.getElementById('correus-programats-btn').addEventListener('click', obrirProgramats);
+    document.getElementById('correus-configurar-full-btn').addEventListener('click', onConfigurarFullNou);
 
     const input = document.getElementById('correus-sheet-link-input');
     const existing = State.getSheetIdCorreus();
@@ -55,9 +56,24 @@ const Correus = (function () {
       ]);
       alumnes = alumnesData.alumnes;
       plantilles = plantillesData.plantilles;
+      document.getElementById('correus-empty-notice').classList.toggle('hidden', plantilles.length !== 0);
       resetWizard();
     } catch (err) {
       Util.showToast('Enviar correus: ' + err.message, 'error');
+    }
+  }
+
+  async function onConfigurarFullNou() {
+    const btn = document.getElementById('correus-configurar-full-btn');
+    btn.disabled = true;
+    try {
+      const data = await Api.call('configurarFull', { sheetId: State.getSheetIdCorreus() });
+      Util.showToast((data.canvis || []).join(' · ') || 'Full preparat.');
+      loadOptions();
+    } catch (err) {
+      Util.showToast('No s\'ha pogut preparar el full: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
     }
   }
 

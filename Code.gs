@@ -27,7 +27,7 @@ const BLOCS = [
   { casella: 12, plantilla: 13, adjunt: 14, data: 15 } // Bloc 3 "Valoració final" (M-P)
 ];
 
-const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'insertRow', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat', 'processarEnviamentsAra'];
+const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'configurarFullOficial', 'insertRow', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat', 'processarEnviamentsAra'];
 
 // Mapa de visualització (Plantilles!C fa servir aquest text amb majúscules/accents;
 // cargarPlantilles_ ho normalitza tot a minúscules per fer-hi coincidències).
@@ -747,6 +747,55 @@ function obtenirFullRoster_(ss) {
   return fulls[0];
 }
 
+// Prepara un Google Sheets COMPLETAMENT NOU i buit perquè es pugui fer servir
+// com a "Excel oficial": hi escriu les capçaleres de ROSTER_COLUMNS a la fila
+// 2 i, quan és possible, els desplegables natius de Sheets per a les
+// columnes de tipus 'select' (només per comoditat si algú obre el full
+// directament — la web sempre fa servir el seu propi <select>, no en depèn).
+// És idempotent i no toca res si el full ja té capçaleres: pensada perquè mai
+// interfereixi amb un full real ja en ús.
+function configurarFullOficial_(ss) {
+  const hoja = obtenirFullRoster_(ss);
+  const numCols = ROSTER_COLUMNS.length;
+  const canvis = [];
+
+  assegurarColumnes_(hoja, numCols);
+
+  const capçaleraActual = hoja.getLastRow() >= 2 ? hoja.getRange(2, 1, 1, numCols).getValues()[0] : [];
+  const jaTeCapçaleres = capçaleraActual.some(function (v) { return v !== '' && v !== null; });
+
+  if (jaTeCapçaleres) {
+    canvis.push('Aquest full ja tenia capçaleres a la fila 2: no s\'ha tocat res.');
+    return canvis;
+  }
+
+  hoja.getRange(2, 1, 1, numCols).setValues([ROSTER_COLUMNS.map(function (c) { return c.header; })]);
+  hoja.getRange(2, 1, 1, numCols).setFontWeight('bold');
+  canvis.push('Capçaleres escrites a la fila 2 (' + numCols + ' columnes).');
+
+  if (hoja.getLastRow() < 3) {
+    hoja.insertRowAfter(2);
+    canvis.push('Afegida una primera fila buida (fila 3) per començar a introduir alumnat.');
+  }
+
+  const FILES_VALIDACIO = 200;
+  let desplegablesOk = 0;
+  ROSTER_COLUMNS.forEach(function (col, idx) {
+    if (col.tipus !== 'select' || !col.opcions) return;
+    try {
+      const rang = hoja.getRange(3, idx + 1, FILES_VALIDACIO, 1);
+      const regla = SpreadsheetApp.newDataValidation().requireValueInList(col.opcions, true).setAllowInvalid(true).build();
+      rang.setDataValidation(regla);
+      desplegablesOk++;
+    } catch (err) {
+      canvis.push('No s\'ha pogut posar el desplegable natiu de "' + col.header + '": ' + err.message);
+    }
+  });
+  if (desplegablesOk) canvis.push('Desplegables natius de Sheets aplicats a ' + desplegablesOk + ' columnes (files 3-' + (2 + FILES_VALIDACIO) + ').');
+
+  return canvis;
+}
+
 function obtenirDadesRoster_(ss) {
   const hoja = obtenirFullRoster_(ss);
   const last = hoja.getLastRow();
@@ -1010,6 +1059,7 @@ function executarAccio_(accio, payload, ss) {
   switch (accio) {
     case 'getDashboard': return obtenirDashboardRoster_(ss);
     case 'getSheetData': return obtenirDadesRoster_(ss);
+    case 'configurarFullOficial': return { canvis: configurarFullOficial_(ss) };
     case 'updateCell': return actualitzarCellaRoster_(ss, payload);
     case 'insertRow': return inserirFilaRoster_(ss, payload);
     case 'getPlantilles': return obtenirPlantillesApi_(ss);

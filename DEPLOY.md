@@ -83,7 +83,8 @@ Al repositori de GitHub: **Settings → Pages → Source: Deploy from a branch �
 Quan copiïs qualsevol dels dos Sheets per a un curs nou, no cal tornar a desplegar res:
 
 1. Enganxa el nou enllaç a "Excel oficial" i/o "Enviar correus" (es desen per separat, només al navegador, per curs/dispositiu).
-2. Si el Sheet nou és el d'"Enviar correus" i és un full completament nou (sense capçaleres ni plantilles), executa la funció `configurarFullEnviament` un cop des de l'editor d'Apps Script (Extensions → Apps Script → selecciona la funció → ▶ Executar) perquè es preparin les capçaleres i les plantilles d'exemple.
+2. Si el Sheet nou és **completament en blanc** (sense capçaleres ni dades), la mateixa web ho detecta i mostra un avís amb el botó **"🆕 Preparar aquest full nou per a l'ús amb la web"**, tant a "Excel oficial" (escriu les 29 capçaleres de l'estructura a la fila 2, els desplegables natius de Sheets i una primera fila buida) com a "Enviar correus" (crea "Enviament"/"Plantilles"/"Registre", capçaleres i 3 plantilles d'exemple). No cal fer res manualment a l'editor d'Apps Script per a aquest pas — només funciona sobre un full realment buit, no toca res si ja hi ha dades.
+3. Alternativament, per al Sheet d'"Enviar correus" també es pot executar la funció `configurarFullEnviament` un cop des de l'editor d'Apps Script (Extensions → Apps Script → selecciona la funció → ▶ Executar) — fa exactament el mateix que el botó de la web.
 
 L'any acadèmic de l'assumpte (`{{anyAcademic}}`) es calcula sol; no cal tocar-lo mai més.
 

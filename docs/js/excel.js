@@ -1,6 +1,7 @@
 const Excel = (function () {
   function init() {
     document.getElementById('sheet-link-save').addEventListener('click', onSaveLink);
+    document.getElementById('excel-configurar-full-btn').addEventListener('click', onConfigurarFullNou);
 
     const input = document.getElementById('sheet-link-input');
     const existing = State.getSheetIdOficial();
@@ -40,7 +41,22 @@ const Excel = (function () {
     }
   }
 
+  async function onConfigurarFullNou() {
+    const btn = document.getElementById('excel-configurar-full-btn');
+    btn.disabled = true;
+    try {
+      const data = await Api.call('configurarFullOficial', { sheetId: State.getSheetIdOficial() });
+      Util.showToast((data.canvis || []).join(' · ') || 'Full preparat.');
+      loadActiveTab();
+    } catch (err) {
+      Util.showToast('No s\'ha pogut preparar el full: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   function renderGrid(data) {
+    document.getElementById('excel-empty-notice').classList.toggle('hidden', data.rows.length !== 0);
     const table = document.getElementById('excel-table');
     const theadCells = '<th class="add-row-col"></th>' + data.headers.map(function (h) { return '<th>' + Util.escapeHtml(h) + '</th>'; }).join('');
     const bodyRows = data.rows.map(function (rowObj) {
