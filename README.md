@@ -8,7 +8,7 @@ No hi ha cap base de dades pròpia: **els Google Sheets són la font de veritat*
 
 ## Els dos Google Sheets
 
-El projecte fa servir **dos Sheets independents**, cadascun amb la seva pròpia caixa d'enllaç a la web (es desen per separat al navegador, en `localStorage`):
+El projecte fa servir **dos Sheets independents**, cadascun amb la seva pròpia caixa d'enllaç (es desen per separat al navegador, en `localStorage`). Totes dues caixes es troben juntes al diàleg **"Configuració dels Sheets"**, que s'obre amb la icona ⚙️ de la capçalera (al costat de "Tanca sessió"):
 
 | Secció web | Sheet que fa servir | Què hi llegeix/escriu |
 |---|---|---|

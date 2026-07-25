@@ -25,6 +25,7 @@
   <header class="app-header">
     <span class="app-title">Gestor EE</span>
     <span class="user-email"></span>
+    <button id="settings-btn" class="icon-btn header-icon-btn" title="Configuració dels Sheets">⚙️</button>
     <button id="logout-btn" class="btn-link">Tanca sessió</button>
   </header>
 
@@ -44,7 +45,7 @@
 
     <section id="section-dashboard" class="app-section active">
       <div id="dashboard-no-sheet" class="notice hidden">
-        Encara no hi ha cap Google Sheets configurat. Ves a <strong>Excel oficial</strong> i enganxa l'enllaç.
+        Encara no hi ha cap Google Sheets configurat. Prem la icona ⚙️ de dalt (al costat de "Tanca sessió") per enganxar-hi l'enllaç.
       </div>
       <div id="dashboard-tiles" class="tiles-grid"></div>
       <div class="dashboard-students-header">
@@ -55,20 +56,7 @@
     </section>
 
     <section id="section-excel" class="app-section">
-      <div class="section-toolbar">
-        <button id="excel-settings-btn" class="icon-btn" title="Configura l'enllaç del Sheet">⚙️</button>
-      </div>
-
-      <div id="excel-sheet-settings" class="sheet-link-box">
-        <label for="sheet-link-input">Enllaç del Google Sheets oficial</label>
-        <div class="sheet-link-row">
-          <input id="sheet-link-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/...">
-          <button id="sheet-link-save" class="btn-primary">Desa</button>
-        </div>
-        <p id="sheet-link-status" class="hint-text"></p>
-      </div>
-
-      <div id="excel-no-sheet" class="notice hidden">Enganxa i desa l'enllaç del Sheet per veure'n les dades.</div>
+      <div id="excel-no-sheet" class="notice hidden">Encara no has enganxat cap enllaç. Prem la icona ⚙️ de dalt per fer-ho.</div>
 
       <div id="excel-empty-notice" class="notice hidden">
         Aquest full no té encara capçaleres ni dades (sembla un Google Sheets nou i buit).
@@ -83,20 +71,7 @@
     </section>
 
     <section id="section-correus" class="app-section">
-      <div class="section-toolbar">
-        <button id="correus-settings-btn" class="icon-btn" title="Configura l'enllaç del Sheet">⚙️</button>
-      </div>
-
-      <div id="correus-sheet-settings" class="sheet-link-box">
-        <label for="correus-sheet-link-input">Enllaç del Google Sheets d'enviament de correus</label>
-        <div class="sheet-link-row">
-          <input id="correus-sheet-link-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/...">
-          <button id="correus-sheet-link-save" class="btn-primary">Desa</button>
-        </div>
-        <p id="correus-sheet-link-status" class="hint-text"></p>
-      </div>
-
-      <div id="correus-no-sheet" class="notice hidden">Enganxa i desa l'enllaç del Sheet d'enviament de correus.</div>
+      <div id="correus-no-sheet" class="notice hidden">Encara no has enganxat cap enllaç. Prem la icona ⚙️ de dalt per fer-ho.</div>
 
       <div id="correus-empty-notice" class="notice hidden">
         Aquest full no té encara cap plantilla (sembla un Google Sheets nou i buit).
@@ -111,6 +86,33 @@
     </section>
 
   </main>
+</div>
+
+<div id="settings-modal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>Configuració dels Sheets</h2>
+      <button id="settings-close-btn" class="icon-btn" title="Tanca">✕</button>
+    </div>
+
+    <div class="sheet-link-box">
+      <label for="sheet-link-input">Enllaç del Google Sheets oficial</label>
+      <div class="sheet-link-row">
+        <input id="sheet-link-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/...">
+        <button id="sheet-link-save" class="btn-primary">Desa</button>
+      </div>
+      <p id="sheet-link-status" class="hint-text"></p>
+    </div>
+
+    <div class="sheet-link-box">
+      <label for="correus-sheet-link-input">Enllaç del Google Sheets d'enviament de correus</label>
+      <div class="sheet-link-row">
+        <input id="correus-sheet-link-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/...">
+        <button id="correus-sheet-link-save" class="btn-primary">Desa</button>
+      </div>
+      <p id="correus-sheet-link-status" class="hint-text"></p>
+    </div>
+  </div>
 </div>
 
 <div id="toast" class="toast hidden"></div>

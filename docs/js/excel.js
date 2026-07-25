@@ -2,9 +2,6 @@ const Excel = (function () {
   function init() {
     document.getElementById('sheet-link-save').addEventListener('click', onSaveLink);
     document.getElementById('excel-configurar-full-btn').addEventListener('click', onConfigurarFullNou);
-    document.getElementById('excel-settings-btn').addEventListener('click', function () {
-      document.getElementById('excel-sheet-settings').classList.toggle('hidden');
-    });
 
     const input = document.getElementById('sheet-link-input');
     const existing = State.getSheetIdOficial();
@@ -29,7 +26,6 @@ const Excel = (function () {
 
   function refreshGate() {
     const has = !!State.getSheetIdOficial();
-    document.getElementById('excel-sheet-settings').classList.toggle('hidden', has);
     document.getElementById('excel-no-sheet').classList.toggle('hidden', has);
     document.getElementById('excel-grid-wrap').classList.toggle('hidden', !has);
     if (has) loadActiveTab();

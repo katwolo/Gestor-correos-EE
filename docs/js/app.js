@@ -8,8 +8,17 @@ const App = (function () {
       btn.addEventListener('click', function () { showSection(btn.dataset.section); });
     });
 
+    document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
+    document.getElementById('settings-close-btn').addEventListener('click', closeSettingsModal);
+    document.getElementById('settings-modal').addEventListener('click', function (ev) {
+      if (ev.target.id === 'settings-modal') closeSettingsModal();
+    });
+
     Auth.init();
   }
+
+  function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
+  function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
 
   function showSection(name) {
     document.querySelectorAll('.nav-btn').forEach(function (b) {
