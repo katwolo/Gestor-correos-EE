@@ -1083,6 +1083,7 @@ function executarAccio_(accio, payload, ss) {
 
 function obtenirPlantillesApi_(ss) {
   const hoja = ss.getSheetByName(SHEETS.PLANTILLES);
+  if (!hoja) return { assumpteBase: 'Missatge IEB', plantilles: [] };
   const mapa = cargarPlantilles_(hoja);
   const llista = Object.keys(mapa).map(function (key) {
     return { nom: mapa[key].nom, cos: mapa[key].cos, destinatari: mapa[key].destinatari };
@@ -1122,6 +1123,7 @@ function actualitzarTutorAlumne_(ss, payload) {
 
 function obtenirAlumnes_(ss) {
   const hoja = ss.getSheetByName(SHEETS.ENVIAMENT);
+  if (!hoja) return { alumnes: [] };
   const last = hoja.getLastRow();
   if (last < 2) return { alumnes: [] };
   assegurarColumnes_(hoja, 17);
