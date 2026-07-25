@@ -7,7 +7,7 @@ Aquest projecte té dues meitats:
 
 L'accés a la web es protegeix amb una contrasenya simple que tu tries (Script Property `APP_PASSWORD`) — no fa falta cap login de Google ni crear res a Google Cloud Console.
 
-**Important**: el projecte fa servir **dos Google Sheets diferents**, cadascun amb la seva pròpia caixa d'enllaç a la web (es desen per separat al navegador):
+**Important**: el projecte fa servir **dos Google Sheets diferents**, cadascun amb la seva pròpia caixa d'enllaç a la web (es desen per separat al navegador). Aquesta caixa està amagada rere la icona ⚙️ de la cantonada superior dreta de cada secció (Excel oficial / Enviar correus) — es desplega automàticament la primera vegada (quan encara no hi ha cap enllaç desat) i es torna a plegar en desar-ne un de nou.
 
 1. **Excel oficial** (secció Dashboard + Excel oficial): el teu full real de seguiment de l'alumnat (p. ex. "2n EAS A 24-25..."). Només es fa servir la **primera pestanya**, sigui quin sigui el seu nom — la resta de pestanyes (INSTRUCCIONS, EMPRESES, etc.) s'ignoren. La columna **AC** (29a) s'utilitza per anotar les **hores realitzades a cada conveni** (una xifra per fila), perquè el Dashboard les sumi cap a les 515h totals del quadern.
 2. **Enviar correus**: el full amb els fulls "Enviament"/"Plantilles"/"Registre" per disparar correus amb plantilles.

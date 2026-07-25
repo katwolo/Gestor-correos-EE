@@ -275,6 +275,25 @@ html, body {
 .progress-done { background: var(--success); }
 .progress-exempt { background: var(--exempt); }
 
+/* ---- Barra d'eines de secció (icona d'engranatge) ---- */
+
+.section-toolbar { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+
+.icon-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, transform 0.1s;
+}
+.icon-btn:hover { color: var(--primary); border-color: var(--primary); }
+.icon-btn:active { transform: scale(0.94); }
+
 /* ---- Excel oficial ---- */
 
 .sheet-link-box { margin-bottom: 20px; }

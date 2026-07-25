@@ -16,6 +16,9 @@ const Correus = (function () {
     document.getElementById('correus-sheet-link-save').addEventListener('click', onSaveLink);
     document.getElementById('correus-programats-btn').addEventListener('click', obrirProgramats);
     document.getElementById('correus-configurar-full-btn').addEventListener('click', onConfigurarFullNou);
+    document.getElementById('correus-settings-btn').addEventListener('click', function () {
+      document.getElementById('correus-sheet-settings').classList.toggle('hidden');
+    });
 
     const input = document.getElementById('correus-sheet-link-input');
     const existing = State.getSheetIdCorreus();
@@ -40,6 +43,7 @@ const Correus = (function () {
 
   function refreshGate() {
     const has = !!State.getSheetIdCorreus();
+    document.getElementById('correus-sheet-settings').classList.toggle('hidden', has);
     document.getElementById('correus-no-sheet').classList.toggle('hidden', has);
     document.getElementById('correus-wizard').classList.toggle('hidden', !has);
     document.getElementById('correus-toolbar').classList.toggle('hidden', !has);
