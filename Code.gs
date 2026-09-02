@@ -710,7 +710,7 @@ const ROSTER_COLUMNS = [
   { header: 'Número acord', tipus: 'text' },
   { header: 'Data inici', tipus: 'data' },
   { header: 'Data final', tipus: 'data' },
-  { header: 'Acord (ref05) i pla activitats (ref06)', tipus: 'select', opcions: ['Falta', 'Entregat', 'Rebut de coord FCT', 'Enviat alumne/empresa'] },
+  { header: 'Acord (ref05) i pla activitats (ref06)', tipus: 'select', opcions: ['He enviat el circuit', 'Signat per tothom'] },
   { header: 'Renúncia', tipus: 'select', opcions: ['FCT', 'Signat', 'Enviat a coordinació FCT'] },
   { header: 'Exempció (%)', tipus: 'select', opcions: ['No aplica', 'Sol.licitud enviada', '25%', '50%', '100%', 'Negativa'] },
   { header: "Contactes amb l'empresa", tipus: 'select', opcions: ['No he fet', 'Inicial', 'Seguiment', 'Valoració'] },
