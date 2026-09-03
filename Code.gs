@@ -739,7 +739,7 @@ const HORES_QUADERN_TOTAL = 515;
 
 // Fases de la barra "Acord (ref05) i pla activitats (ref06)" (columna ACORD),
 // en l'ordre en què avança el tràmit. Una cel·la buida es tracta com a fase 0.
-const FASES_ACORD = ['(Pendent)', 'Falta', 'Entregat', 'Rebut de coord FCT', 'Enviat alumne/empresa'];
+const FASES_ACORD = ['(Pendent)', 'He enviat el circuit', 'Signat per tothom'];
 
 function obtenirFullRoster_(ss) {
   const fulls = ss.getSheets();
