@@ -944,7 +944,7 @@ function obtenirDashboardRoster_(ss) {
 
     const finalitzat = !!notaFinal;
     const actiu = !finalitzat && practiques === 'SI';
-    const faltaDocument = !finalitzat && (acord !== 'Enviat alumne/empresa' || quadern !== 'Enviat definitiu');
+    const faltaDocument = !finalitzat && (acord !== 'Signat per tothom' || quadern !== 'Enviat definitiu');
 
     if (finalitzat) finalitzats++;
     else if (actiu) actius++;

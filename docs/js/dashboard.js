@@ -146,8 +146,8 @@ const Dashboard = (function () {
   }
 
   // Barra 2: en quin punt està l'"Acord (ref05) i pla activitats (ref06)"
-  // del conveni actual ((Pendent) → Falta → Entregat → Rebut de coord FCT →
-  // Enviat alumne/empresa).
+  // del conveni actual ((Pendent) → He enviat el circuit → Signat per
+  // tothom). Les fases venen calculades pel backend (FASES_ACORD a Code.gs).
   function renderFaseBar(a) {
     const pct = ((a.faseConveniIndex + 1) / a.faseConveniTotal) * 100;
     const label = 'Acord (ref05/06): ' + a.faseConveni;

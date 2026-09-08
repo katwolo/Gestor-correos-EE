@@ -44,7 +44,7 @@ En altres paraules: l'**estat/fase mostrats** corresponen sempre al **conveni m�
 |---|---|
 | **Actius** | `!finalitzat && practiques === 'SI'` |
 | **Finalitzats** | La columna "Nota final" té algun valor |
-| **Pendents de documentació** | Actiu i (l'acord no és "Enviat alumne/empresa" **o** el quadern (R22) no és "Enviat definitiu") |
+| **Pendents de documentació** | Actiu i (l'acord no és "Signat per tothom" **o** el quadern (R22) no és "Enviat definitiu") |
 | **Amb exempció de pràctiques** | El camp "Exempció (%)" té algun valor diferent de "No aplica" |
 | **Total alumnat** | Nombre de grups (alumnes) |
 
@@ -65,10 +65,12 @@ Cada targeta d'alumne mostra dues barres, una sota l'altra:
 **2) Barra "Acord (ref05/06)"** — en quin punt està el tràmit d'acord i pla d'activitats del conveni **més recent** (l'última fila del grup), segons la columna "Acord (ref05) i pla activitats (ref06)":
 
 ```
-(Pendent)  →  Falta  →  Entregat  →  Rebut de coord FCT  →  Enviat alumne/empresa
+(Pendent)  →  He enviat el circuit  →  Signat per tothom
 ```
 
-La barra omple `(índex_fase + 1) / 5`. Una cel·la buida es tracta com "(Pendent)" (fase 0); un valor no reconegut fa el mateix. **Important**: aquesta fase és sempre la del **conveni més recent**, no un resum de tots els convenis — si un alumne ja ha tancat un primer conveni i n'ha començat un segon, la barra reflecteix el segon.
+La barra omple `(índex_fase + 1) / 3`. Una cel·la buida es tracta com "(Pendent)" (fase 0); un valor no reconegut fa el mateix. **Important**: aquesta fase és sempre la del **conveni més recent**, no un resum de tots els convenis — si un alumne ja ha tancat un primer conveni i n'ha començat un segon, la barra reflecteix el segon.
+
+Les fases d'aquesta barra estan definides a `FASES_ACORD` (Code.gs), en el mateix ordre que les opcions de la columna "Acord (ref05) i pla activitats (ref06)" a `ROSTER_COLUMNS`. Si algun dia canvies les opcions d'aquesta columna, cal actualitzar **totes dues llistes** perquè coincideixin — i també la condició de la tile "Pendents de documentació", que compara l'acord amb el valor final ("Signat per tothom").
 
 ### Cercador d'alumnes
 
