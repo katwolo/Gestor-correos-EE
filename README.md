@@ -83,10 +83,29 @@ Al costat del títol "Alumnat" hi ha un camp de cerca per nom. Filtra en temps r
 Graella editable directament sobre la primera pestanya de l'Excel oficial (`getSheetData` / `updateCell` / `insertRow`), sense passar per la interfície de Google Sheets:
 
 - **Capçalera i primera columna fixes** (`position: sticky`) perquè es pugui fer scroll per les 29 columnes sense perdre de vista de quin alumne/columna es tracta.
-- Cada columna es renderitza segons el seu **tipus**, definit al backend (`ROSTER_COLUMNS`): `select` (desplegable amb les mateixes opcions que el Sheet), `data` (input de data) o `text` (cel·la editable en línia). Els canvis es desen a l'instant (`updateCell`) en editar/desseleccionar la cel·la, amb un flaix verd/vermell de confirmació.
+- Cada columna es renderitza segons el seu **tipus**: `select` (desplegable), `data` (input de data) o `text` (cel·la editable en línia). Els canvis es desen a l'instant (`updateCell`) en editar/desseleccionar la cel·la, amb un flaix verd/vermell de confirmació.
 - Cada fila té un botó **"+"** a la primera columna: insereix una fila buida just a sota (mateix mecanisme que "Insereix fila" de Sheets, que copia format i validacions). Serveix per afegir un **nou conveni** a un alumne existent: es deixa el nom en blanc perquè `agruparAlumnesRoster_` l'agrupi automàticament amb les files anteriors del mateix alumne.
 
 No hi ha cap "configuració" que calgui executar sobre aquest Sheet: l'app hi llegeix/escriu directament respectant la seva pròpia estructura de 29 columnes.
+
+### D'on surten les opcions dels desplegables
+
+Per a cada columna `select`, `getSheetData` (`obtenirOpcionsValidacio_`) mira si la **fila 3** d'aquella columna té una Validació de dades pròpia configurada al Google Sheet (Dades → Validació de dades, tipus "llista d'un interval" o "llista d'elements"):
+
+- **Si en té**, la web fa servir exactament eixes opcions al seu desplegable. Això vol dir que pots **afegir, treure o renombrar opcions directament al Sheet** (com feies abans de fer servir la web) i el canvi es reflecteix sol a la graella, sense tocar `Code.gs` ni tornar a desplegar res.
+- **Si no en té** (o no es pot llegir per qualsevol motiu), es fa servir com a valor per defecte la llista fixada a `ROSTER_COLUMNS` dins de `Code.gs`.
+
+**Important**: això només controla **quines opcions apareixen al desplegable**. Algunes columnes tenen, a més, lògica pròpia al Dashboard que espera un text concret:
+
+| Columna | Lògica que en depèn |
+|---|---|
+| "Acord (ref05) i pla activitats (ref06)" | `FASES_ACORD` (barra de progrés) i la condició de la tile "Pendents de documentació" comparen amb els textos exactes de les opcions |
+| "Exempció (%)" | `teExempcio_`/`parseExempcioPercent_` reconeixen "No aplica" i un percentatge (`25%`, etc.) |
+| "Ha començat pràctiques" | `actiu` compara amb `'SI'` |
+| "Nota final" | `finalitzat` és cert si la cel·la té qualsevol valor |
+| "R22 (Quadern FCT)" | la tile "Pendents de documentació" compara amb `'Enviat definitiu'` |
+
+Si canvies el desplegable d'aquestes columnes concretes a Sheets (per exemple, renombrar "Signat per tothom"), el desplegable de la graella s'actualitzarà sol, però caldrà avisar perquè s'actualitzi també la lògica corresponent a `Code.gs` — si no, la tile o la barra de progrés poden deixar de reflectir bé la realitat (com ja va passar un cop). Per a la resta de columnes `select` (Renúncia, R02/R03, Agendes SBID, etc.), que no alimenten cap càlcul, pots editar-les lliurement a Sheets sense cap efecte secundari.
 
 ### Començar des d'un Google Sheets nou i buit
 

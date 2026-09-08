@@ -796,6 +796,35 @@ function configurarFullOficial_(ss) {
   return canvis;
 }
 
+// Si la columna té una Validació de dades de tipus "llista" configurada
+// directament al Google Sheets (Dades > Validació de dades), es fan servir
+// EIXES opcions en lloc de les fixades a ROSTER_COLUMNS — així, si algú
+// canvia el desplegable directament al full (afegir/treure/renombrar
+// opcions), la graella de la web ho reflecteix sense haver de tocar
+// Code.gs ni tornar a desplegar. Si la columna no té cap validació pròpia
+// (o no es pot llegir per qualsevol motiu), es manté el comportament antic:
+// les opcions fixades al codi.
+function obtenirOpcionsValidacio_(hoja, col, filaMostra) {
+  try {
+    const regla = hoja.getRange(filaMostra, col).getDataValidation();
+    if (!regla) return null;
+    const criteri = regla.getCriteriaType();
+    const valors = regla.getCriteriaValues();
+    if (criteri === SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST) {
+      const llista = valors[0];
+      return (llista && llista.length) ? llista : null;
+    }
+    if (criteri === SpreadsheetApp.DataValidationCriteria.VALUE_IN_RANGE) {
+      const plans = valors[0].getValues().reduce(function (acc, fila) { return acc.concat(fila); }, []);
+      const unics = plans.filter(function (v, i) { return v !== '' && v !== null && plans.indexOf(v) === i; });
+      return unics.length ? unics : null;
+    }
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
+
 function obtenirDadesRoster_(ss) {
   const hoja = obtenirFullRoster_(ss);
   const last = hoja.getLastRow();
@@ -807,11 +836,15 @@ function obtenirDadesRoster_(ss) {
       return { row: i + 3, values: fila };
     })
     : [];
-  return {
-    headers: headers,
-    rows: rows,
-    columnTypes: ROSTER_COLUMNS.map(function (c) { return { tipus: c.tipus, opcions: c.opcions || null }; })
-  };
+
+  const filaMostra = last >= 3 ? 3 : null;
+  const columnTypes = ROSTER_COLUMNS.map(function (c, idx) {
+    if (c.tipus !== 'select') return { tipus: c.tipus, opcions: null };
+    const opcionsSheet = filaMostra ? obtenirOpcionsValidacio_(hoja, idx + 1, filaMostra) : null;
+    return { tipus: 'select', opcions: opcionsSheet || c.opcions || null };
+  });
+
+  return { headers: headers, rows: rows, columnTypes: columnTypes };
 }
 
 function actualitzarCellaRoster_(ss, payload) {
