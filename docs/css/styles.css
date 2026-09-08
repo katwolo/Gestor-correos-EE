@@ -331,6 +331,13 @@ html, body {
 }
 .modal-header h2 { margin: 0; font-size: 1.1rem; }
 
+.modal-danger-zone {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+}
+.btn-danger-link { color: var(--danger); display: block; margin-bottom: 4px; }
+
 /* ---- Excel oficial ---- */
 
 .sheet-link-box { margin-bottom: 20px; }

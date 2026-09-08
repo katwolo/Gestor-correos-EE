@@ -13,12 +13,32 @@ const App = (function () {
     document.getElementById('settings-modal').addEventListener('click', function (ev) {
       if (ev.target.id === 'settings-modal') closeSettingsModal();
     });
+    document.getElementById('reset-web-btn').addEventListener('click', resetWeb);
 
     Auth.init();
   }
 
   function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
   function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
+
+  // Neteja només el navegador (els dos sheetId desats i tot el que es
+  // mostra): no toca res dels Google Sheets reals ni tanca la sessió.
+  function resetWeb() {
+    const ok = confirm('Segur que vols reiniciar la web? S\'esborraran els dos enllaços desats en aquest navegador i deixaràs de veure les dades carregades. Els teus Google Sheets no es toquen.');
+    if (!ok) return;
+
+    State.setSheetIdOficial(null);
+    State.setSheetIdCorreus(null);
+
+    document.getElementById('sheet-link-input').value = '';
+    document.getElementById('sheet-link-status').textContent = '';
+    document.getElementById('correus-sheet-link-input').value = '';
+    document.getElementById('correus-sheet-link-status').textContent = '';
+
+    Dashboard.load();
+    closeSettingsModal();
+    Util.showToast('Web reiniciada: enllaços esborrats.');
+  }
 
   function showSection(name) {
     document.querySelectorAll('.nav-btn').forEach(function (b) {
