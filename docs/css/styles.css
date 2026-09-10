@@ -336,7 +336,23 @@ html, body {
   padding-top: 16px;
   border-top: 1px dashed var(--border);
 }
-.modal-section .sheet-link-row { margin-bottom: 6px; }
+
+.password-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 10px;
+}
+.password-fields input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.btn-block { display: block; width: 100%; text-align: center; }
 
 .modal-danger-zone {
   margin-top: 8px;
@@ -389,11 +405,26 @@ html, body {
 .excel-table .add-row-col {
   position: sticky;
   left: 0;
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
   background: var(--surface);
   text-align: center;
   z-index: 1;
 }
 .excel-table th.add-row-col { z-index: 3; }
+
+/* Columna del nom de l'alumne/a (sempre la primera columna de dades):
+   immòbil també, just després del botó "+", perquè no es perdi de vista en
+   fer scroll horitzontal per la resta de columnes. */
+.excel-table .sticky-col {
+  position: sticky;
+  left: 40px;
+  background: var(--surface);
+  z-index: 1;
+  box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15);
+}
+.excel-table th.sticky-col { z-index: 3; }
 
 .add-row-btn {
   border: 1px solid var(--border);

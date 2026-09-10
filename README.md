@@ -82,7 +82,7 @@ Al costat del títol "Alumnat" hi ha un camp de cerca per nom. Filtra en temps r
 
 Graella editable directament sobre la primera pestanya de l'Excel oficial (`getSheetData` / `updateCell` / `insertRow`), sense passar per la interfície de Google Sheets:
 
-- **Capçalera i primera columna fixes** (`position: sticky`) perquè es pugui fer scroll per les 29 columnes sense perdre de vista de quin alumne/columna es tracta.
+- **Capçalera, botó "+" i columna del nom fixes** (`position: sticky`, les dues primeres columnes) perquè es pugui fer scroll horitzontal per la resta de columnes sense perdre de vista de quin alumne es tracta.
 - Cada columna es renderitza segons el seu **tipus**: `select` (desplegable), `data` (input de data) o `text` (cel·la editable en línia). Els canvis es desen a l'instant (`updateCell`) en editar/desseleccionar la cel·la, amb un flaix verd/vermell de confirmació.
 - Cada fila té un botó **"+"** a la primera columna: insereix una fila buida just a sota (mateix mecanisme que "Insereix fila" de Sheets, que copia format i validacions). Serveix per afegir un **nou conveni** a un alumne existent: es deixa el nom en blanc perquè `agruparAlumnesRoster_` l'agrupi automàticament amb les files anteriors del mateix alumne.
 

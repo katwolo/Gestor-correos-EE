@@ -58,7 +58,9 @@ const Excel = (function () {
   function renderGrid(data) {
     document.getElementById('excel-empty-notice').classList.toggle('hidden', data.rows.length !== 0);
     const table = document.getElementById('excel-table');
-    const theadCells = '<th class="add-row-col"></th>' + data.headers.map(function (h) { return '<th>' + Util.escapeHtml(h) + '</th>'; }).join('');
+    const theadCells = '<th class="add-row-col"></th>' + data.headers.map(function (h, idx) {
+      return '<th' + (idx === 0 ? ' class="sticky-col"' : '') + '>' + Util.escapeHtml(h) + '</th>';
+    }).join('');
     const bodyRows = data.rows.map(function (rowObj) {
       const addRowBtn = '<td class="add-row-col"><button class="add-row-btn" data-after-row="' + rowObj.row +
         '" title="Insereix una fila nova (nou conveni) just després d\'aquesta">+</button></td>';
@@ -74,17 +76,18 @@ const Excel = (function () {
 
   function renderCell(value, row, colIdx, columnType) {
     const attrs = 'data-row="' + row + '" data-col="' + (colIdx + 1) + '"';
+    const claseTd = colIdx === 0 ? ' class="sticky-col"' : '';
     if (columnType.tipus === 'select' && columnType.opcions) {
       const options = ['<option value=""></option>'].concat(columnType.opcions.map(function (opt) {
         return '<option value="' + Util.escapeHtml(opt) + '"' + (opt === value ? ' selected' : '') + '>' + Util.escapeHtml(opt) + '</option>';
       })).join('');
-      return '<td><select ' + attrs + '>' + options + '</select></td>';
+      return '<td' + claseTd + '><select ' + attrs + '>' + options + '</select></td>';
     }
     if (columnType.tipus === 'data') {
       const dateVal = value ? String(value).slice(0, 10) : '';
-      return '<td><input type="date" ' + attrs + ' value="' + dateVal + '"></td>';
+      return '<td' + claseTd + '><input type="date" ' + attrs + ' value="' + dateVal + '"></td>';
     }
-    return '<td contenteditable="true" ' + attrs + '>' + Util.escapeHtml(value) + '</td>';
+    return '<td' + claseTd + ' contenteditable="true" ' + attrs + '>' + Util.escapeHtml(value) + '</td>';
   }
 
   function wireCellEvents(table) {
