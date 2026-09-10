@@ -78,6 +78,7 @@ Al repositori de GitHub: **Settings → Pages → Source: Deploy from a branch �
 8. Prova un enviament amb un adjunt de Drive invàlid barrejat amb un de vàlid → el correu ha d'arribar amb l'adjunt vàlid, no sense cap.
 9. A **Activadors** (rellotge, barra lateral de l'editor d'Apps Script) comprova que `enviament` segueix programat cada dia a les 8:00 — és el mateix trigger que, cada dia, revisa el full "Programats" i envia el que ja toqui.
 10. Mòbil: obre la URL de Pages al mòbil (o simula-ho amb les eines de desenvolupador) i navega per les 3 seccions.
+11. A la icona ⚙️ de la capçalera, prova "Canvia la contrasenya d'accés": escriu-ne una de prova dues vegades i prem "Canvia" → ha de sortir "Contrasenya actualitzada" i has de poder seguir navegant sense tornar a entrar. Tanca sessió i torna a entrar amb la contrasenya nova per confirmar que s'ha desat de veritat a `APP_PASSWORD`. Recorda tornar-la a canviar per la definitiva si només era una prova.
 
 ## 8. Cada curs nou
 
@@ -91,4 +92,6 @@ L'any acadèmic de l'assumpte (`{{anyAcademic}}`) es calcula sol; no cal tocar-l
 
 ## Nota sobre seguretat
 
-Aquesta contrasenya és una protecció senzilla, pensada per a un ús personal (que ningú sense l'enllaç i la contrasenya pugui veure les dades dels teus alumnes), no un sistema d'autenticació robust — es transmet a cada crida i es guarda només en memòria del navegador (es perd en tancar la pestanya). No la reutilitzis d'altres serveis i canvia-la (Script Property `APP_PASSWORD`) si mai sospites que s'ha filtrat.
+Aquesta contrasenya és una protecció senzilla, pensada per a un ús personal (que ningú sense l'enllaç i la contrasenya pugui veure les dades dels teus alumnes), no un sistema d'autenticació robust — es transmet a cada crida i es guarda només en memòria del navegador (es perd en tancar la pestanya). No la reutilitzis d'altres serveis i canvia-la si mai sospites que s'ha filtrat.
+
+Es pot canviar de dues maneres: des de la mateixa web (icona ⚙️ de la capçalera → "Canvia la contrasenya d'accés" → escriu-la dues vegades → Canvia — la sessió oberta continua funcionant sola, sense haver de tornar a entrar), o manualment editant l'Script Property `APP_PASSWORD` des de Configuració del projecte a l'editor d'Apps Script.

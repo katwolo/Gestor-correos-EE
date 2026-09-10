@@ -14,12 +14,52 @@ const App = (function () {
       if (ev.target.id === 'settings-modal') closeSettingsModal();
     });
     document.getElementById('reset-web-btn').addEventListener('click', resetWeb);
+    document.getElementById('change-password-btn').addEventListener('click', changePassword);
 
     Auth.init();
   }
 
   function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
   function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
+
+  // Canvia l'APP_PASSWORD des de la mateixa web. El servidor ja exigeix la
+  // contrasenya actual (es manda sola a cada crida via Api.call), així que
+  // aquí només cal demanar-ne una de nova; en confirmar-se, s'actualitza
+  // l'State perquè la sessió actual segueixi funcionant sense haver de
+  // tornar a entrar.
+  async function changePassword() {
+    const input = document.getElementById('new-password-input');
+    const confirmInput = document.getElementById('new-password-confirm');
+    const status = document.getElementById('change-password-status');
+    const nova = input.value.trim();
+    const repetida = confirmInput.value.trim();
+
+    if (nova.length < 4) {
+      status.textContent = 'La contrasenya ha de tenir com a mínim 4 caràcters.';
+      return;
+    }
+    if (nova !== repetida) {
+      status.textContent = 'Les dues contrasenyes no coincideixen.';
+      return;
+    }
+
+    const btn = document.getElementById('change-password-btn');
+    btn.disabled = true;
+    status.textContent = 'Canviant...';
+    try {
+      await Api.call('canviarContrasenya', { novaContrasenya: nova });
+      State.setPassword(nova);
+      input.value = '';
+      confirmInput.value = '';
+      status.textContent = 'Contrasenya actualitzada.';
+      Util.showToast('Contrasenya canviada correctament.');
+    } catch (err) {
+      status.textContent = 'Error: ' + err.message;
+      Util.showToast('No s\'ha pogut canviar la contrasenya: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
 
   // Neteja només el navegador (els dos sheetId desats i tot el que es
   // mostra): no toca res dels Google Sheets reals ni tanca la sessió.

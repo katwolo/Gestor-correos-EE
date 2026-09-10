@@ -211,3 +211,5 @@ Igual que a "Excel oficial", si enganxes l'enllaç d'un Sheet completament nou i
 ## Autenticació
 
 L'accés a tota la web es protegeix amb una **contrasenya compartida simple** (Script Property `APP_PASSWORD`), enviada a cada crida a l'API i verificada al backend — no hi ha login de Google ni compte per usuari. Es guarda només en memòria del navegador (es perd en tancar la pestanya). Vegeu la nota de seguretat a `DEPLOY.md`.
+
+Es pot canviar des de la mateixa web (icona ⚙️ → "Canvia la contrasenya d'accés"): l'acció `canviarContrasenya` reaprofita la verificació de la contrasenya actual que ja fa `doPost` per a qualsevol crida, així que només cal escriure la nova (dues vegades, per evitar errades de picada) i prement "Canvia" queda desada a `APP_PASSWORD`; la sessió oberta actualitza sola la contrasenya que fa servir a partir d'aleshores, sense haver de tornar a entrar.

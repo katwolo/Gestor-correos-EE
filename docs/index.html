@@ -91,7 +91,7 @@
 <div id="settings-modal" class="modal-overlay hidden">
   <div class="modal-card">
     <div class="modal-header">
-      <h2>Configuració dels Sheets</h2>
+      <h2>Configuració</h2>
       <button id="settings-close-btn" class="icon-btn" title="Tanca">✕</button>
     </div>
 
@@ -111,6 +111,18 @@
         <button id="correus-sheet-link-save" class="btn-primary">Desa</button>
       </div>
       <p id="correus-sheet-link-status" class="hint-text"></p>
+    </div>
+
+    <div class="modal-section">
+      <label for="new-password-input">Canvia la contrasenya d'accés</label>
+      <div class="sheet-link-row">
+        <input id="new-password-input" type="password" placeholder="Contrasenya nova" autocomplete="new-password">
+      </div>
+      <div class="sheet-link-row">
+        <input id="new-password-confirm" type="password" placeholder="Repeteix-la" autocomplete="new-password">
+        <button id="change-password-btn" class="btn-primary">Canvia</button>
+      </div>
+      <p id="change-password-status" class="hint-text"></p>
     </div>
 
     <div class="modal-danger-zone">

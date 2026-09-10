@@ -1059,6 +1059,9 @@ function doPost(e) {
     if (accio === 'login') {
       return jsonResponse_({ ok: true, data: { ok: true } });
     }
+    if (accio === 'canviarContrasenya') {
+      return jsonResponse_({ ok: true, data: accioCanviarContrasenya_(payload) });
+    }
 
     const ss = payload.sheetId ? SpreadsheetApp.openById(payload.sheetId) : null;
 
@@ -1090,6 +1093,20 @@ function verificarContrasenya_(password) {
   if (!password || password !== esperada) {
     const e = new Error('Contrasenya incorrecta'); e.code = 'UNAUTHORIZED'; throw e;
   }
+}
+
+// Canvia l'APP_PASSWORD des de la mateixa web (Configuració → Canvia la
+// contrasenya), sense haver d'entrar a Propietats de l'script manualment.
+// doPost ja ha verificat la contrasenya ACTUAL abans de despatxar aquesta
+// acció (verificarContrasenya_), així que aquí només cal validar i desar la
+// nova.
+function accioCanviarContrasenya_(payload) {
+  const nova = String(payload.novaContrasenya || '').trim();
+  if (nova.length < 4) {
+    const e = new Error('La contrasenya nova ha de tenir com a mínim 4 caràcters'); e.code = 'BAD_REQUEST'; throw e;
+  }
+  PropertiesService.getScriptProperties().setProperty('APP_PASSWORD', nova);
+  return { ok: true };
 }
 
 function executarAccio_(accio, payload, ss) {

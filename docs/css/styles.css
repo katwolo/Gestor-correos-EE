@@ -331,6 +331,13 @@ html, body {
 }
 .modal-header h2 { margin: 0; font-size: 1.1rem; }
 
+.modal-section {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+}
+.modal-section .sheet-link-row { margin-bottom: 6px; }
+
 .modal-danger-zone {
   margin-top: 8px;
   padding-top: 16px;
