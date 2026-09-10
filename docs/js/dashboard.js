@@ -149,9 +149,14 @@ const Dashboard = (function () {
   // del conveni actual ((Pendent) → He enviat el circuit → Signat per
   // tothom). Les fases venen calculades pel backend (FASES_ACORD a Code.gs).
   function renderFaseBar(a) {
-    const pct = ((a.faseConveniIndex + 1) / a.faseConveniTotal) * 100;
+    const total = a.faseConveniTotal;
+    const idx = a.faseConveniIndex;
+    // Buida a la primera fase ("(Pendent)"), plena i verda a l'última
+    // (acord tancat), taronja a les intermèdies (en curs).
+    const pct = total > 1 ? (idx / (total - 1)) * 100 : 0;
+    const colorClass = idx >= total - 1 ? 'progress-done' : 'progress-fase';
     const label = 'Acord (ref05/06): ' + a.faseConveni;
-    return renderProgressBar(pct, 'progress-fase', Util.escapeHtml(label));
+    return renderProgressBar(pct, colorClass, Util.escapeHtml(label));
   }
 
   return { init: init, load: load };

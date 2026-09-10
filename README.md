@@ -68,7 +68,7 @@ Cada targeta d'alumne mostra dues barres, una sota l'altra:
 (Pendent)  →  He enviat el circuit  →  Signat per tothom
 ```
 
-La barra omple `(índex_fase + 1) / 3`. Una cel·la buida es tracta com "(Pendent)" (fase 0); un valor no reconegut fa el mateix. **Important**: aquesta fase és sempre la del **conveni més recent**, no un resum de tots els convenis — si un alumne ja ha tancat un primer conveni i n'ha començat un segon, la barra reflecteix el segon.
+La barra omple `índex_fase / (total_fases − 1)`: **buida** a "(Pendent)" (fase 0, incloent una cel·la buida o un valor no reconegut), **taronja** a les fases intermèdies, i **verda i plena** a l'última fase ("Signat per tothom" — l'acord ja està tancat). **Important**: aquesta fase és sempre la del **conveni més recent**, no un resum de tots els convenis — si un alumne ja ha tancat un primer conveni i n'ha començat un segon, la barra reflecteix el segon.
 
 Les fases d'aquesta barra estan definides a `FASES_ACORD` (Code.gs), en el mateix ordre que les opcions de la columna "Acord (ref05) i pla activitats (ref06)" a `ROSTER_COLUMNS`. Si algun dia canvies les opcions d'aquesta columna, cal actualitzar **totes dues llistes** perquè coincideixin — i també la condició de la tile "Pendents de documentació", que compara l'acord amb el valor final ("Signat per tothom").
 
