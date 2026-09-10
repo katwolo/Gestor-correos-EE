@@ -56,11 +56,11 @@ Cada targeta d'alumne mostra dues barres, una sota l'altra:
 
 **1) Barra "Quadern"** — quantes hores porta fetes del quadern de pràctiques total.
 
-- L'objectiu de base són **515 hores**.
-- Si té una exempció concedida amb percentatge (**25%, 50% o 100%**), l'objectiu es redueix: `objectiu = 515 × (1 − percentatge/100)`. Amb 100% l'alumne apareix directament com "exempt/a" (barra plena).
-- Valors com "Sol·licitud enviada" o "Negativa" a "Exempció (%)" **no** redueixen l'objectiu (es tracten com a 0%) fins que hi hagi un percentatge concret confirmat.
-- Les **hores fetes** són la suma calculada abans (`totalHores`, sumant la columna AC de tots els convenis de l'alumne).
-- La barra mostra "fetes / objectiu" i, si en falten, "falten Xh"; en arribar al 100% es marca com a completa (color diferent).
+- L'objectiu és sempre **515 hores** (l'exempció no el redueix).
+- Si té una exempció concedida amb percentatge (**25%, 50% o 100%**), eixe percentatge de 515h es compta com a **hores ja fetes** ("hores de regal"), no com una reducció de l'objectiu: `horesExempcio = 515 × percentatge/100`. Per exemple, un 25% suma 128,75h fetes encara que l'alumne no hagi introduït cap hora real.
+- Valors com "Sol·licitud enviada" o "Negativa" a "Exempció (%)" **no** sumen cap hora (es tracten com a 0%) fins que hi hagi un percentatge concret confirmat.
+- Les **hores fetes** que es mostren són `totalHores + horesExempcio`, on `totalHores` és la suma de la columna AC ("Hores realitzades") de tots els convenis de l'alumne.
+- La barra mostra "fetes / 515h" i, si en falten, "falten Xh"; en arribar (o passar) les 515h es marca com a completa (color diferent) — amb 100% d'exempció, per tant, ja surt "complet" encara que no s'hagi introduït cap hora real.
 
 **2) Barra "Acord (ref05/06)"** — en quin punt està el tràmit d'acord i pla d'activitats del conveni **més recent** (l'última fila del grup), segons la columna "Acord (ref05) i pla activitats (ref06)":
 

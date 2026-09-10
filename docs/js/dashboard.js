@@ -131,12 +131,10 @@ const Dashboard = (function () {
       '</div>';
   }
 
-  // Barra 1: hores fetes del quadern (515h en total, menys l'exempció) sumant
-  // les hores de TOTS els convenis de l'alumne.
+  // Barra 1: hores fetes del quadern (sempre sobre 515h) sumant les hores
+  // reals de TOTS els convenis de l'alumne més les "hores de regal" de
+  // l'exempció (25%/50%/100% de 515h comptades com si ja s'haguessin fet).
   function renderHoresBar(a) {
-    if (a.horesObjectiu <= 0) {
-      return renderProgressBar(100, 'progress-exempt', 'Quadern: exempt/a de pràctiques (100%)');
-    }
     const pct = (a.horesFetes / a.horesObjectiu) * 100;
     const fetes = Math.round(a.horesFetes * 10) / 10;
     const objectiu = Math.round(a.horesObjectiu * 10) / 10;

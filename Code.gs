@@ -984,9 +984,15 @@ function obtenirDashboardRoster_(ss) {
     if (actiu && faltaDocument) pendentsDocumentacio++;
     if (teExempcioActiva) ambExempcio++;
 
+    // L'exempció ja NO redueix l'objectiu de 515h: en lloc d'això, el seu
+    // percentatge es compta com a hores ja fetes (25% de 515h = 128,75h "de
+    // regal"), sumades a les hores reals introduïdes a "Hores realitzades".
+    // Així, un alumne amb exempció es veu com si ja hagués avançat una part
+    // del quadern, no com si li calguessin menys hores en total.
     const percentExempcio = parseExempcioPercent_(exempcio);
-    const horesObjectiu = HORES_QUADERN_TOTAL * (1 - percentExempcio / 100);
-    const horesFetes = g.totalHores;
+    const horesExempcio = HORES_QUADERN_TOTAL * (percentExempcio / 100);
+    const horesObjectiu = HORES_QUADERN_TOTAL;
+    const horesFetes = g.totalHores + horesExempcio;
     const horesPendents = Math.max(0, horesObjectiu - horesFetes);
     const fase = calcularFaseAcord_(acord);
 
