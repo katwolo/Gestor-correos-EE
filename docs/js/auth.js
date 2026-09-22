@@ -5,7 +5,7 @@ const Auth = (function () {
 
   async function onSubmit(ev) {
     ev.preventDefault();
-    const pass = document.getElementById('login-password').value;
+    const pass = document.getElementById('login-password').value.trim();
     if (!pass) return;
 
     State.setPassword(pass);
@@ -40,5 +40,16 @@ const Auth = (function () {
     document.getElementById('login-screen').classList.remove('hidden');
   }
 
-  return { init: init, logout: logout };
+  // Es crida quan qualsevol acció (no el propi formulari de login) rep
+  // UNAUTHORIZED — normalment perquè la contrasenya s'ha canviat des d'un
+  // altre dispositiu/pestanya mentre aquesta sessió seguia oberta amb
+  // l'antiga en memòria. En lloc de deixar que cada acció falli per
+  // separat amb un missatge confús, es torna a la pantalla d'entrada amb
+  // una explicació clara.
+  function sessionExpired() {
+    logout();
+    showLoginError('La contrasenya d\'aquesta sessió ja no és vàlida (potser s\'ha canviat des d\'un altre dispositiu). Torna a introduir-la.');
+  }
+
+  return { init: init, logout: logout, sessionExpired: sessionExpired };
 })();

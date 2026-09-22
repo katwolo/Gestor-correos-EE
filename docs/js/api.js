@@ -39,6 +39,14 @@ const Api = (function () {
     // senyalitza amb el camp "ok" del cos JSON.
     if (!json.ok) {
       const err = json.error || {};
+      // Qualsevol acció (excepte el propi login, que ja gestiona el seu error
+      // a la pantalla d'entrada) que rebi UNAUTHORIZED vol dir que la
+      // contrasenya d'aquesta sessió ja no és vàlida — es torna a la
+      // pantalla d'entrada amb una explicació, en lloc de deixar que cada
+      // acció falli per separat amb un missatge confús.
+      if (err.code === 'UNAUTHORIZED' && action !== 'login') {
+        Auth.sessionExpired();
+      }
       throw new ApiError(err.code || 'SERVER_ERROR', err.message || 'Error desconegut');
     }
     return json.data;
