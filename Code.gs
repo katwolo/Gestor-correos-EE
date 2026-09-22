@@ -804,10 +804,13 @@ function configurarFullOficial_(ss) {
 // Code.gs ni tornar a desplegar. Si la columna no té cap validació pròpia
 // (o no es pot llegir per qualsevol motiu), es manté el comportament antic:
 // les opcions fixades al codi.
-function obtenirOpcionsValidacio_(hoja, col, filaMostra) {
+// Donada una regla de Validació de dades (o null si la cel·la no en té),
+// n'extreu la llista d'opcions com a text. No fa cap crida a l'API: la regla
+// ja s'ha llegit abans en bloc amb getDataValidations() (vegeu
+// obtenirDadesRoster_) per evitar una crida separada per columna.
+function extreureOpcionsValidacio_(regla) {
+  if (!regla) return null;
   try {
-    const regla = hoja.getRange(filaMostra, col).getDataValidation();
-    if (!regla) return null;
     const criteri = regla.getCriteriaType();
     const valors = regla.getCriteriaValues();
     if (criteri === SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST) {
@@ -837,10 +840,16 @@ function obtenirDadesRoster_(ss) {
     })
     : [];
 
-  const filaMostra = last >= 3 ? 3 : null;
+  // Una sola crida (getDataValidations, en plural) llegeix TOTA la fila
+  // mostra d'un cop, en lloc d'una crida getDataValidation() per columna
+  // (~20 columnes 'select' = ~20 crides innecessàries, notablement més lent).
+  const validacionsFilaMostra = last >= 3
+    ? hoja.getRange(3, 1, 1, numCols).getDataValidations()[0]
+    : null;
+
   const columnTypes = ROSTER_COLUMNS.map(function (c, idx) {
     if (c.tipus !== 'select') return { tipus: c.tipus, opcions: null };
-    const opcionsSheet = filaMostra ? obtenirOpcionsValidacio_(hoja, idx + 1, filaMostra) : null;
+    const opcionsSheet = validacionsFilaMostra ? extreureOpcionsValidacio_(validacionsFilaMostra[idx]) : null;
     return { tipus: 'select', opcions: opcionsSheet || c.opcions || null };
   });
 
