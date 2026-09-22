@@ -710,7 +710,7 @@ const ROSTER_COLUMNS = [
   { header: 'Número acord', tipus: 'text' },
   { header: 'Data inici', tipus: 'data' },
   { header: 'Data final', tipus: 'data' },
-  { header: 'Acord (ref05) i pla activitats (ref06)', tipus: 'select', opcions: ['He enviat el circuit', 'Signat per tothom'] },
+  { header: 'Acord (ref05) i pla activitats (ref06)', tipus: 'select', opcions: ['Entrega sol·licitud dades', 'He enviat el circuit', 'Signat per tothom'] },
   { header: 'Renúncia', tipus: 'select', opcions: ['FCT', 'Signat', 'Enviat a coordinació FCT'] },
   { header: 'Exempció (%)', tipus: 'select', opcions: ['No aplica', 'Sol.licitud enviada', '25%', '50%', '100%', 'Negativa'] },
   { header: "Contactes amb l'empresa", tipus: 'select', opcions: ['No he fet', 'Inicial', 'Seguiment', 'Valoració'] },
@@ -739,7 +739,7 @@ const HORES_QUADERN_TOTAL = 515;
 
 // Fases de la barra "Acord (ref05) i pla activitats (ref06)" (columna ACORD),
 // en l'ordre en què avança el tràmit. Una cel·la buida es tracta com a fase 0.
-const FASES_ACORD = ['(Pendent)', 'He enviat el circuit', 'Signat per tothom'];
+const FASES_ACORD = ['(Pendent)', 'Entrega sol·licitud dades', 'He enviat el circuit', 'Signat per tothom'];
 
 function obtenirFullRoster_(ss) {
   const fulls = ss.getSheets();
