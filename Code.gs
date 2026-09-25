@@ -1063,15 +1063,6 @@ function doPost(e) {
       return jsonResponse_({ ok: true, data: { time: new Date().toISOString(), version: '1.0' } });
     }
 
-    verificarContrasenya_(body.password);
-
-    if (accio === 'login') {
-      return jsonResponse_({ ok: true, data: { ok: true } });
-    }
-    if (accio === 'canviarContrasenya') {
-      return jsonResponse_({ ok: true, data: accioCanviarContrasenya_(payload) });
-    }
-
     const ss = payload.sheetId ? SpreadsheetApp.openById(payload.sheetId) : null;
 
     const necessitaLock = ACCIONS_MUTABLES.indexOf(accio) !== -1;
@@ -1090,32 +1081,6 @@ function doPost(e) {
 
 function jsonResponse_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
-
-// Autenticació simple per contrasenya compartida (Script Property APP_PASSWORD),
-// en lloc de login de Google — evita haver de crear un Client ID d'OAuth.
-function verificarContrasenya_(password) {
-  const esperada = PropertiesService.getScriptProperties().getProperty('APP_PASSWORD');
-  if (!esperada) {
-    const e = new Error('Falta configurar la propietat APP_PASSWORD a Script Properties'); e.code = 'SERVER_ERROR'; throw e;
-  }
-  if (!password || password !== esperada) {
-    const e = new Error('Contrasenya incorrecta'); e.code = 'UNAUTHORIZED'; throw e;
-  }
-}
-
-// Canvia l'APP_PASSWORD des de la mateixa web (Configuració → Canvia la
-// contrasenya), sense haver d'entrar a Propietats de l'script manualment.
-// doPost ja ha verificat la contrasenya ACTUAL abans de despatxar aquesta
-// acció (verificarContrasenya_), així que aquí només cal validar i desar la
-// nova.
-function accioCanviarContrasenya_(payload) {
-  const nova = String(payload.novaContrasenya || '').trim();
-  if (nova.length < 4) {
-    const e = new Error('La contrasenya nova ha de tenir com a mínim 4 caràcters'); e.code = 'BAD_REQUEST'; throw e;
-  }
-  PropertiesService.getScriptProperties().setProperty('APP_PASSWORD', nova);
-  return { ok: true };
 }
 
 function executarAccio_(accio, payload, ss) {

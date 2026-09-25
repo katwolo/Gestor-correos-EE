@@ -1,7 +1,6 @@
 const State = (function () {
   const listeners = {};
   const data = {
-    password: null, // només en memòria, mai a localStorage
     sheetIdOficial: localStorage.getItem('eeSheetIdOficial') || null, // Dashboard / Excel oficial (roster)
     sheetIdCorreus: localStorage.getItem('eeSheetIdCorreus') || null  // Enviar correus (Enviament/Plantilles/Registre)
   };
@@ -32,22 +31,9 @@ const State = (function () {
     emit('sheetIdCorreus', id);
   }
 
-  function setPassword(password) {
-    data.password = password;
-    emit('auth', !!password);
-  }
-
-  function clearPassword() {
-    data.password = null;
-    emit('auth', false);
-  }
-
-  function getPassword() { return data.password; }
-
   return {
     on: on, emit: emit,
     getSheetIdOficial: getSheetIdOficial, setSheetIdOficial: setSheetIdOficial,
-    getSheetIdCorreus: getSheetIdCorreus, setSheetIdCorreus: setSheetIdCorreus,
-    setPassword: setPassword, clearPassword: clearPassword, getPassword: getPassword
+    getSheetIdCorreus: getSheetIdCorreus, setSheetIdCorreus: setSheetIdCorreus
   };
 })();

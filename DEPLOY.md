@@ -5,9 +5,9 @@ Aquest projecte té dues meitats:
 - **Backend**: `Code.gs` + `appsscript.json`, que s'han d'enganxar manualment a un projecte d'Apps Script. No es pot desplegar automàticament des d'aquí — són passos que has de fer tu a la interfície de Google.
 - **Frontend**: la carpeta `docs/`, pensada per servir-se com a lloc estàtic amb GitHub Pages.
 
-L'accés a la web es protegeix amb una contrasenya simple que tu tries (Script Property `APP_PASSWORD`) — no fa falta cap login de Google ni crear res a Google Cloud Console.
+La web **no té cap login ni contrasenya**: s'entra directament al Dashboard. Vegeu la nota de seguretat al final d'aquest document — és important entendre què implica abans de compartir l'enllaç.
 
-**Important**: el projecte fa servir **dos Google Sheets diferents**, cadascun amb la seva pròpia caixa d'enllaç a la web (es desen per separat al navegador). Totes dues caixes viuen dins d'un mateix diàleg de "Configuració dels Sheets", que s'obre amb la icona ⚙️ de la capçalera (al costat de "Tanca sessió").
+**Important**: el projecte fa servir **dos Google Sheets diferents**, cadascun amb la seva pròpia caixa d'enllaç a la web (es desen per separat al navegador). Totes dues caixes viuen dins d'un mateix diàleg de "Configuració", que s'obre amb la icona ⚙️ de la capçalera.
 
 1. **Excel oficial** (secció Dashboard + Excel oficial): el teu full real de seguiment de l'alumnat (p. ex. "2n EAS A 24-25..."). Només es fa servir la **primera pestanya**, sigui quin sigui el seu nom — la resta de pestanyes (INSTRUCCIONS, EMPRESES, etc.) s'ignoren. La columna **AC** (29a) s'utilitza per anotar les **hores realitzades a cada conveni** (una xifra per fila), perquè el Dashboard les sumi cap a les 515h totals del quadern.
 2. **Enviar correus**: el full amb els fulls "Enviament"/"Plantilles"/"Registre" per disparar correus amb plantilles.
@@ -33,7 +33,6 @@ A **Configuració del projecte → Propietats de l'script**, afegeix:
 
 | Propietat | Valor |
 |---|---|
-| `APP_PASSWORD` | La contrasenya que triïs per entrar a la web (només l'has de saber tu) |
 | `ENVIAMENT_SHEET_ID` | **Important**: l'ID del full d'"Enviar correus" (la part de l'URL entre `/d/` i `/edit`) — ha de ser exactament el mateix full que tens enganxat a la web. Sense això, el trigger diari fa servir el full al qual estigui lligat el projecte, que podria no coincidir |
 | `TEACHER_NOTIFY_EMAIL` | (opcional) email on rebre l'avís si algun enviament de correu falla |
 
@@ -66,19 +65,16 @@ Al repositori de GitHub: **Settings → Pages → Source: Deploy from a branch �
 
 ## 7. Checklist de proves manuals
 
-1. Obre la URL de Pages → surt la pantalla demanant la contrasenya.
-2. Introdueix la contrasenya correcta (`APP_PASSWORD`) → hauria d'aparèixer el panell principal.
-3. Prova amb una contrasenya incorrecta → ha de sortir "Contrasenya incorrecta", no una pantalla en blanc.
-4. A "Excel oficial", enganxa l'enllaç del teu Excel oficial de seguiment → han d'aparèixer les dades del dashboard (incloent el rètol "Amb exempció de pràctiques") i la graella (respecta la primera pestanya). A cada targeta d'alumne han de sortir dues barres: hores del quadern (515h, o menys si té exempció) i l'estat de l'"Acord (ref05) i pla activitats (ref06)" del conveni actual. Comprova també el cercador per nom al costat del títol "Alumnat" (es pot combinar amb el filtre d'una tile).
-5. Edita una cel·la de prova a la graella (p. ex. una llista desplegable com "Acord (ref05) i pla activitats (ref06)", o un número a "Hores realitzades") → comprova que el canvi es reflecteix al Sheet real i que les barres del Dashboard es recalculen.
-5b. Canvia directament a Google Sheets (Dades → Validació de dades) la llista d'opcions d'una columna `select` (p. ex. afegeix una opció nova a "Acord") i torna a carregar "Excel oficial" → el desplegable de la graella ha de mostrar la llista nova sense tocar `Code.gs` ni redesplegar res.
-6. Prova el botó "+ fila" d'una fila → ha d'aparèixer una fila nova buida just a sota al Sheet real (per afegir un segon conveni del mateix alumne, deixant el nom en blanc).
-7. A "Enviar correus", enganxa l'enllaç del Sheet d'enviament (diferent de l'anterior) i segueix l'assistent: alumne/a → tutor/a (comprova que es pot editar i desar el nom/correu del tutor/a) → plantilles (marca'n més d'una, prova "✏️" per editar-ne una i comprova que es desa al Sheet) → adjunts → confirmar. Marca una plantilla sense data (s'ha d'enviar a l'instant) i una altra amb una data futura (ha d'aparèixer al full nou "Programats" amb estat "Pendent"). Comprova que `Registre` registra `Estat=OK` per la que s'envia ara, i que si coincideix amb un dels 3 blocs clàssics, la casella/data del Sheet s'actualitzen soles.
-7b. Prem "📅 Veure correus programats" (a sobre de l'assistent): ha d'aparèixer la llista de tot el full "Programats". Edita la data d'un pendent (✏️ → canvia la data → 💾 Desa) i comprova que es reflecteix al Sheet; elimina'n un altre (🗑️, amb confirmació) i comprova que desapareix la fila del Sheet. Els que ja s'han enviat o han fallat no haurien de mostrar botons d'editar/eliminar. Si n'hi ha algun pendent amb data d'avui o anterior que encara no s'hagi enviat, prem "▶ Processa els pendents ara" i comprova que s'envia i passa a "Enviat" (si no, el missatge de resultat n'explicarà el motiu).
+1. Obre la URL de Pages → hauria d'aparèixer directament el Dashboard, sense cap pantalla de login.
+2. A "Excel oficial", enganxa l'enllaç del teu Excel oficial de seguiment → han d'aparèixer les dades del dashboard (incloent el rètol "Amb exempció de pràctiques") i la graella (respecta la primera pestanya). A cada targeta d'alumne han de sortir dues barres: hores del quadern (515h, o menys si té exempció) i l'estat de l'"Acord (ref05) i pla activitats (ref06)" del conveni actual. Comprova també el cercador per nom al costat del títol "Alumnat" (es pot combinar amb el filtre d'una tile).
+3. Edita una cel·la de prova a la graella (p. ex. una llista desplegable com "Acord (ref05) i pla activitats (ref06)", o un número a "Hores realitzades") → comprova que el canvi es reflecteix al Sheet real i que les barres del Dashboard es recalculen.
+4. Canvia directament a Google Sheets (Dades → Validació de dades) la llista d'opcions d'una columna `select` (p. ex. afegeix una opció nova a "Acord") i torna a carregar "Excel oficial" → el desplegable de la graella ha de mostrar la llista nova sense tocar `Code.gs` ni redesplegar res.
+5. Prova el botó "+ fila" d'una fila → ha d'aparèixer una fila nova buida just a sota al Sheet real (per afegir un segon conveni del mateix alumne, deixant el nom en blanc).
+6. A "Enviar correus", enganxa l'enllaç del Sheet d'enviament (diferent de l'anterior) i segueix l'assistent: alumne/a → tutor/a (comprova que es pot editar i desar el nom/correu del tutor/a) → plantilles (marca'n més d'una, prova "✏️" per editar-ne una i comprova que es desa al Sheet) → adjunts → confirmar. Marca una plantilla sense data (s'ha d'enviar a l'instant) i una altra amb una data futura (ha d'aparèixer al full nou "Programats" amb estat "Pendent"). Comprova que `Registre` registra `Estat=OK` per la que s'envia ara, i que si coincideix amb un dels 3 blocs clàssics, la casella/data del Sheet s'actualitzen soles.
+7. Prem "📅 Veure correus programats" (a sobre de l'assistent): ha d'aparèixer la llista de tot el full "Programats". Edita la data d'un pendent (✏️ → canvia la data → 💾 Desa) i comprova que es reflecteix al Sheet; elimina'n un altre (🗑️, amb confirmació) i comprova que desapareix la fila del Sheet. Els que ja s'han enviat o han fallat no haurien de mostrar botons d'editar/eliminar. Si n'hi ha algun pendent amb data d'avui o anterior que encara no s'hagi enviat, prem "▶ Processa els pendents ara" i comprova que s'envia i passa a "Enviat" (si no, el missatge de resultat n'explicarà el motiu).
 8. Prova un enviament amb un adjunt de Drive invàlid barrejat amb un de vàlid → el correu ha d'arribar amb l'adjunt vàlid, no sense cap.
 9. A **Activadors** (rellotge, barra lateral de l'editor d'Apps Script) comprova que `enviament` segueix programat cada dia a les 8:00 — és el mateix trigger que, cada dia, revisa el full "Programats" i envia el que ja toqui.
 10. Mòbil: obre la URL de Pages al mòbil (o simula-ho amb les eines de desenvolupador) i navega per les 3 seccions.
-11. A la icona ⚙️ de la capçalera, prova "Canvia la contrasenya d'accés": escriu-ne una de prova dues vegades i prem "Canvia" → ha de sortir "Contrasenya actualitzada" i has de poder seguir navegant sense tornar a entrar. Tanca sessió i torna a entrar amb la contrasenya nova per confirmar que s'ha desat de veritat a `APP_PASSWORD`. Recorda tornar-la a canviar per la definitiva si només era una prova.
 
 ## 8. Cada curs nou
 
@@ -92,6 +88,10 @@ L'any acadèmic de l'assumpte (`{{anyAcademic}}`) es calcula sol; no cal tocar-l
 
 ## Nota sobre seguretat
 
-Aquesta contrasenya és una protecció senzilla, pensada per a un ús personal (que ningú sense l'enllaç i la contrasenya pugui veure les dades dels teus alumnes), no un sistema d'autenticació robust — es transmet a cada crida i es guarda només en memòria del navegador (es perd en tancar la pestanya). No la reutilitzis d'altres serveis i canvia-la si mai sospites que s'ha filtrat.
+La web **no té cap contrasenya ni login** — qui obri la URL de GitHub Pages entra directament al Dashboard. Això és una decisió deliberada (la contrasenya donava més problemes que protecció real: sessions que quedaven caducades entre dispositius, etc.), però és important entendre exactament quina protecció queda i quina no:
 
-Es pot canviar de dues maneres: des de la mateixa web (icona ⚙️ de la capçalera → "Canvia la contrasenya d'accés" → escriu-la dues vegades → Canvia — la sessió oberta continua funcionant sola, sense haver de tornar a entrar), o manualment editant l'Script Property `APP_PASSWORD` des de Configuració del projecte a l'editor d'Apps Script.
+- **La pantalla que es veu és inofensiva sense un Sheet enganxat**: sense haver desat abans un enllaç en aquell navegador concret, el Dashboard/Excel oficial/Enviar correus es veuen buits ("Encara no hi ha cap Google Sheets configurat").
+- **Però la URL del backend (`/exec`, dins de `docs/js/config.js`) és pública** — qualsevol pot veure-la simplement mirant el codi font de la pàgina. Si algú arriba a tenir eixa URL **i** l'ID del teu Google Sheet real, podria consultar l'API directament (amb `curl` o similar) i llegir totes les dades, sense passar per la web ni per cap login — l'app s'executa amb els permisos del compte que la va desplegar (`executeAs: USER_DEPLOYING`), no amb els de qui fa la petició.
+- **El risc real depèn, doncs, de si l'ID del Sheet es filtra alguna vegada** (un enllaç reenviat, una captura de pantalla, etc.). L'ID en si és una cadena llarga i aleatòria, no adivinable ni seqüencial — és un risc baix, comparable a compartir un Google Doc en mode "qualsevol persona amb l'enllaç", però no és zero.
+
+Si en algun moment vols recuperar una capa de protecció, la solució anterior (contrasenya compartida via Script Property `APP_PASSWORD`, verificada a `doPost` abans de qualsevol acció) es pot tornar a afegir — demana-ho.

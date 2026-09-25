@@ -53,48 +53,6 @@ html, body {
 
 .hidden { display: none !important; }
 
-/* ---- Login screen ---- */
-
-.login-screen {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-.login-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  box-shadow: var(--shadow-soft);
-  padding: 36px 28px;
-  max-width: 380px;
-  width: 100%;
-  text-align: center;
-}
-
-.login-card h1 { margin-top: 0; color: var(--primary); font-weight: 800; }
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.login-form input {
-  padding: 11px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 1rem;
-  text-align: center;
-}
-
-.error-text { color: var(--danger); font-size: 0.9rem; }
-
 /* ---- App shell ---- */
 
 .app-shell {
@@ -330,29 +288,6 @@ html, body {
   margin-bottom: 18px;
 }
 .modal-header h2 { margin: 0; font-size: 1.1rem; }
-
-.modal-section {
-  margin-top: 8px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--border);
-}
-
-.password-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 8px 0 10px;
-}
-.password-fields input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text);
-}
-
-.btn-block { display: block; width: 100%; text-align: center; }
 
 .modal-danger-zone {
   margin-top: 8px;

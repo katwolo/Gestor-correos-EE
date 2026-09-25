@@ -8,7 +8,7 @@ No hi ha cap base de dades pròpia: **els Google Sheets són la font de veritat*
 
 ## Els dos Google Sheets
 
-El projecte fa servir **dos Sheets independents**, cadascun amb la seva pròpia caixa d'enllaç (es desen per separat al navegador, en `localStorage`). Totes dues caixes es troben juntes al diàleg **"Configuració dels Sheets"**, que s'obre amb la icona ⚙️ de la capçalera (al costat de "Tanca sessió"):
+El projecte fa servir **dos Sheets independents**, cadascun amb la seva pròpia caixa d'enllaç (es desen per separat al navegador, en `localStorage`). Totes dues caixes es troben juntes al diàleg **"Configuració"**, que s'obre amb la icona ⚙️ de la capçalera:
 
 | Secció web | Sheet que fa servir | Què hi llegeix/escriu |
 |---|---|---|
@@ -210,8 +210,6 @@ Igual que a "Excel oficial", si enganxes l'enllaç d'un Sheet completament nou i
 
 ## Autenticació
 
-L'accés a tota la web es protegeix amb una **contrasenya compartida simple** (Script Property `APP_PASSWORD`), enviada a cada crida a l'API i verificada al backend — no hi ha login de Google ni compte per usuari. Es guarda només en memòria del navegador (es perd en tancar la pestanya). Vegeu la nota de seguretat a `DEPLOY.md`.
+La web **no té cap login ni contrasenya**: s'entra directament al Dashboard. Hi va haver una contrasenya compartida simple en versions anteriors, però es va treure perquè donava més problemes que protecció real (sessions que quedaven amb una contrasenya caducada entre dispositius, per exemple).
 
-Es pot canviar des de la mateixa web (icona ⚙️ → "Canvia la contrasenya d'accés"): l'acció `canviarContrasenya` reaprofita la verificació de la contrasenya actual que ja fa `doPost` per a qualsevol crida, així que només cal escriure la nova (dues vegades, per evitar errades de picada) i prement "Canvia" queda desada a `APP_PASSWORD`; la sessió oberta actualitza sola la contrasenya que fa servir a partir d'aleshores, sense haver de tornar a entrar.
-
-**Sessions caducades**: com que la contrasenya només viu en memòria de cada pestanya/dispositiu (no hi ha cap sincronització entre sessions obertes), si la canvies en un dispositiu mentre en tens un altre obert amb la sessió antiga, aquell altre es quedarà enviant la contrasenya vella. `Api.call` (`docs/js/api.js`) detecta qualsevol resposta `UNAUTHORIZED` (excepte la del propi formulari de login, que ja gestiona el seu error) i força automàticament la tornada a la pantalla d'entrada amb un avís clar, en lloc de deixar que cada acció falli per separat amb un missatge confús de "contrasenya incorrecta".
+Això no vol dir que qualsevol amb l'enllaç de GitHub Pages vegi les dades: sense haver enganxat abans un `sheetId` en aquell navegador concret, totes les seccions es veuen buides. Però la URL del backend (`/exec`, a `docs/js/config.js`) és pública (visible al codi font), així que qui arribi a tenir eixa URL **i** l'ID d'un dels dos Sheets podria consultar l'API directament, sense passar per la web. Vegeu la nota de seguretat completa a `DEPLOY.md` abans de compartir l'enllaç.
