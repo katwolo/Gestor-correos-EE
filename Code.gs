@@ -1004,6 +1004,8 @@ function obtenirDashboardRoster_(ss) {
     const horesFetes = g.totalHores + horesExempcio;
     const horesPendents = Math.max(0, horesObjectiu - horesFetes);
     const fase = calcularFaseAcord_(acord);
+    const dataIniciVal = row[10];
+    const dataFinalVal = row[11];
 
     return {
       primeraFila: g.primeraFila,
@@ -1016,6 +1018,9 @@ function obtenirDashboardRoster_(ss) {
       quadern: quadern,
       notaFinal: notaFinal,
       exempcio: exempcio,
+      observacions: row[27] || '',
+      dataInici: dataIniciVal instanceof Date ? Utilities.formatDate(dataIniciVal, Session.getScriptTimeZone(), 'yyyy-MM-dd') : '',
+      dataFinal: dataFinalVal instanceof Date ? Utilities.formatDate(dataFinalVal, Session.getScriptTimeZone(), 'yyyy-MM-dd') : '',
       teExempcio: teExempcioActiva,
       finalitzat: finalitzat,
       actiu: actiu,

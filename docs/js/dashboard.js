@@ -21,9 +21,24 @@ const Dashboard = (function () {
     ambExempcio: function (a) { return a.teExempcio; }
   };
 
+  // Opcions del desplegable "Acord" al panell d'edició ràpida del Dashboard.
+  // És la llista per defecte de l'app (mateixa que ROSTER_COLUMNS a Code.gs),
+  // no una consulta en viu del Sheet, perquè obrir el panell sigui immediat.
+  const ACORD_OPTIONS = ['Entrega sol·licitud dades', 'He enviat el circuit', 'Signat per tothom'];
+
+  // Columnes (1-based) de "Excel oficial" que toca el panell d'edició ràpida.
+  const COL_DATA_INICI = 11;
+  const COL_DATA_FINAL = 12;
+  const COL_ACORD = 13;
+  const COL_OBSERVACIONS = 28;
+
+  const OBSERVACIONS_LIMIT = 70;
+
   let alumnesActuals = [];
   let filtreActiu = null;
   let cercaText = '';
+  let expandedRow = null;
+  const obsExpandedRows = new Set();
 
   function init() {
     const input = document.getElementById('dashboard-cerca-alumne');
@@ -31,6 +46,8 @@ const Dashboard = (function () {
       cercaText = ev.target.value;
       renderStudents(document.getElementById('dashboard-students'));
     }, 150));
+
+    document.getElementById('dashboard-students').addEventListener('click', onStudentsClick);
   }
 
   async function load() {
@@ -48,13 +65,22 @@ const Dashboard = (function () {
     }
     wrap.classList.add('hidden');
     cerca.classList.remove('hidden');
+    filtreActiu = null;
+    cercaText = '';
+    cerca.value = '';
+    expandedRow = null;
+    obsExpandedRows.clear();
+    await refresh();
+  }
 
+  // Torna a demanar les dades al backend sense tocar el filtre/cerca actuals
+  // (es fa servir després de desar canvis des del panell d'edició ràpida).
+  async function refresh() {
+    const tiles = document.getElementById('dashboard-tiles');
+    const students = document.getElementById('dashboard-students');
     try {
       const data = await Api.call('getDashboard', { sheetId: State.getSheetIdOficial() });
       alumnesActuals = data.alumnes;
-      filtreActiu = null;
-      cercaText = '';
-      cerca.value = '';
       renderTiles(tiles, data.tiles);
       renderStudents(students);
     } catch (err) {
@@ -85,6 +111,33 @@ const Dashboard = (function () {
     renderStudents(document.getElementById('dashboard-students'));
   }
 
+  // Delegació d'esdeveniments per a tota la llista d'alumnes: evita haver de
+  // re-enganxar listeners cada vegada que es torna a pintar la llista.
+  function onStudentsClick(ev) {
+    const clearBtn = ev.target.closest('#dashboard-clear-filter');
+    if (clearBtn) { onTileClick(filtreActiu); return; }
+
+    const obsToggle = ev.target.closest('.observacions-toggle');
+    if (obsToggle) {
+      const row = Number(obsToggle.closest('.student-card').dataset.row);
+      if (obsExpandedRows.has(row)) obsExpandedRows.delete(row); else obsExpandedRows.add(row);
+      renderStudents(document.getElementById('dashboard-students'));
+      return;
+    }
+
+    const saveBtn = ev.target.closest('.edit-save-btn');
+    if (saveBtn) { guardarPanell(saveBtn); return; }
+
+    if (ev.target.closest('.student-edit-panel')) return;
+
+    const header = ev.target.closest('.student-card-header');
+    if (header) {
+      const row = Number(header.closest('.student-card').dataset.row);
+      expandedRow = expandedRow === row ? null : row;
+      renderStudents(document.getElementById('dashboard-students'));
+    }
+  }
+
   function renderStudents(container) {
     const predicate = filtreActiu ? TILE_FILTERS[filtreActiu] : null;
     const cerca = cercaText.trim().toLowerCase();
@@ -105,21 +158,21 @@ const Dashboard = (function () {
     } else {
       container.innerHTML = capçalera + llista.map(renderStudentCard).join('');
     }
-
-    const clearBtn = document.getElementById('dashboard-clear-filter');
-    if (clearBtn) clearBtn.addEventListener('click', function () { onTileClick(filtreActiu); });
   }
 
+  // Cada targeta és clicable (capçalera) per desplegar un panell d'edició
+  // ràpida cap a "Excel oficial", sense haver d'anar a la graella sencera.
   function renderStudentCard(a) {
-    const estatKey = a.finalitzat ? 'finalitzat' : (a.actiu ? 'actiu' : 'inactiu');
-    return '<div class="student-card">' +
+    const isExpanded = expandedRow === a.ultimaFila;
+    return '<div class="student-card' + (isExpanded ? ' student-card-expanded' : '') + '" data-row="' + a.ultimaFila + '">' +
+      '<div class="student-card-header">' +
       '<div class="student-name">' + Util.escapeHtml(a.nom) + '</div>' +
       '<div class="student-fase">' + Util.escapeHtml(a.empresa || 'Sense empresa assignada') + '</div>' +
       renderHoresBar(a) +
       renderFaseBar(a) +
-      '<div class="hint-text">' + Util.escapeHtml(ESTAT_LABELS[estatKey]) +
-      (a.faltaDocument && !a.finalitzat ? ' · falta documentació' : '') +
-      (a.teExempcio ? ' · <strong>Exempció: ' + Util.escapeHtml(a.exempcio) + '</strong>' : '') + '</div>' +
+      renderObservacionsLine(a) +
+      '</div>' +
+      (isExpanded ? renderEditPanel(a) : '') +
       '</div>';
   }
 
@@ -155,6 +208,73 @@ const Dashboard = (function () {
     const colorClass = idx >= total - 1 ? 'progress-done' : 'progress-fase';
     const label = 'Acord (ref05/06): ' + a.faseConveni;
     return renderProgressBar(pct, colorClass, Util.escapeHtml(label));
+  }
+
+  // Línia inferior de la targeta: substitueix l'antic avís fix de "falta
+  // documentació" pel contingut real d'Observacions (truncat amb un "+" per
+  // ampliar si és llarg). Si l'alumne no té cap observació anotada, no es
+  // mostra res en el seu lloc.
+  function renderObservacionsLine(a) {
+    const estatKey = a.finalitzat ? 'finalitzat' : (a.actiu ? 'actiu' : 'inactiu');
+    const obs = (a.observacions || '').trim();
+    let obsHtml = '';
+    if (obs) {
+      const expandit = obsExpandedRows.has(a.ultimaFila);
+      const esLlarg = obs.length > OBSERVACIONS_LIMIT;
+      const text = expandit || !esLlarg ? obs : obs.slice(0, OBSERVACIONS_LIMIT) + '…';
+      obsHtml = ' · ' + Util.escapeHtml(text) +
+        (esLlarg ? ' <button type="button" class="btn-link observacions-toggle">' + (expandit ? '−' : '+') + '</button>' : '');
+    }
+    return '<div class="hint-text">' + Util.escapeHtml(ESTAT_LABELS[estatKey]) + obsHtml +
+      (a.teExempcio ? ' · <strong>Exempció: ' + Util.escapeHtml(a.exempcio) + '</strong>' : '') + '</div>';
+  }
+
+  // Panell d'edició ràpida: Observacions, Acord, Data inici, Data final —
+  // en aquest ordre — amb un únic botó "Guardar" per a tot el panell.
+  function renderEditPanel(a) {
+    const acordActual = a.acord || '';
+    const opcions = [{ value: '', label: '(Pendent)' }].concat(ACORD_OPTIONS.map(function (o) { return { value: o, label: o }; }));
+    const opcionsHtml = opcions.map(function (o) {
+      return '<option value="' + Util.escapeHtml(o.value) + '"' + (o.value === acordActual ? ' selected' : '') + '>' + Util.escapeHtml(o.label) + '</option>';
+    }).join('');
+
+    return '<div class="student-edit-panel">' +
+      '<div class="form-row"><label>Observacions</label>' +
+      '<textarea class="edit-observacions" rows="3">' + Util.escapeHtml(a.observacions || '') + '</textarea></div>' +
+      '<div class="form-row"><label>Acord (ref05) i pla activitats (ref06)</label>' +
+      '<select class="edit-acord">' + opcionsHtml + '</select></div>' +
+      '<div class="edit-dates-row">' +
+      '<div class="form-row"><label>Data inici</label><input type="date" class="edit-data-inici" value="' + Util.escapeHtml(a.dataInici || '') + '"></div>' +
+      '<div class="form-row"><label>Data final</label><input type="date" class="edit-data-final" value="' + Util.escapeHtml(a.dataFinal || '') + '"></div>' +
+      '</div>' +
+      '<button type="button" class="btn-primary edit-save-btn">Guardar</button>' +
+      '</div>';
+  }
+
+  async function guardarPanell(btn) {
+    const card = btn.closest('.student-card');
+    const row = Number(card.dataset.row);
+    const observacions = card.querySelector('.edit-observacions').value;
+    const acord = card.querySelector('.edit-acord').value;
+    const dataInici = card.querySelector('.edit-data-inici').value;
+    const dataFinal = card.querySelector('.edit-data-final').value;
+    const sheetId = State.getSheetIdOficial();
+
+    btn.disabled = true;
+    btn.textContent = 'Desant…';
+    try {
+      await Api.call('updateCell', { sheetId: sheetId, row: row, col: COL_OBSERVACIONS, value: observacions });
+      await Api.call('updateCell', { sheetId: sheetId, row: row, col: COL_ACORD, value: acord });
+      await Api.call('updateCell', { sheetId: sheetId, row: row, col: COL_DATA_INICI, value: dataInici });
+      await Api.call('updateCell', { sheetId: sheetId, row: row, col: COL_DATA_FINAL, value: dataFinal });
+      Util.showToast('Canvis desats.');
+      expandedRow = null;
+      await refresh();
+    } catch (err) {
+      Util.showToast('No s\'ha pogut desar: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Guardar';
+    }
   }
 
   return { init: init, load: load };
