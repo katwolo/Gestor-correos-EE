@@ -593,7 +593,7 @@ html, body {
 .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.correus-toolbar { margin-bottom: 14px; }
+.correus-toolbar { margin-bottom: 14px; display: flex; gap: 16px; flex-wrap: wrap; }
 
 .programat-item { cursor: default; }
 .programat-item:hover { border-color: var(--border); background: none; }

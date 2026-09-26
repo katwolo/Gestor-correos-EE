@@ -891,13 +891,19 @@ function obtenirDadesRoster_(ss) {
   const hoja = obtenirFullRoster_(ss);
   const last = hoja.getLastRow();
   const numCols = ROSTER_COLUMNS.length;
-  const headers = last >= 2 ? hoja.getRange(2, 1, 1, numCols).getValues()[0] : ROSTER_COLUMNS.map(function (c) { return c.header; });
-  const numFilesDades = Math.max(0, last - 2);
-  const rows = numFilesDades > 0
-    ? hoja.getRange(3, 1, numFilesDades, numCols).getValues().map(function (fila, i) {
+
+  // La capçalera (fila 2) i totes les dades (fila 3 en avant) es llegeixen
+  // amb una sola crida getValues() sobre tot el rang, en lloc d'una crida
+  // per la capçalera i una altra per les dades.
+  let headers = ROSTER_COLUMNS.map(function (c) { return c.header; });
+  let rows = [];
+  if (last >= 2) {
+    const totes = hoja.getRange(2, 1, last - 1, numCols).getValues();
+    headers = totes[0];
+    rows = totes.slice(1).map(function (fila, i) {
       return { row: i + 3, values: fila };
-    })
-    : [];
+    });
+  }
 
   // Una sola crida (getDataValidations, en plural) llegeix TOTA la fila
   // mostra d'un cop, en lloc d'una crida getDataValidation() per columna
@@ -977,13 +983,23 @@ function inserirFilaRoster_(ss, payload) {
 // torna el dashboard recalculat — es fa servir des del panell ràpid del
 // Dashboard ("Crear conveni") per no haver de fer cap crida addicional
 // (ni per camp ni per refrescar-se després).
+// Els camps buits del formulari NO s'escriuen (es deixen tal com queda la
+// fila nova, en blanc): p.ex. si "R02"/"R03" tenen casella de verificació
+// natiu al Sheet real, escriure-hi una cadena buida les marcaria com a
+// "fals" (una casella visible) en lloc de deixar-les sense tocar.
 function crearConveniRoster_(ss, payload) {
   const hoja = obtenirFullRoster_(ss);
   const afterRow = Number(payload.afterRow);
   if (!afterRow || afterRow < 2) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
   hoja.insertRowAfter(afterRow);
   const novaFila = afterRow + 1;
-  escriureCellesRoster_(hoja, novaFila, payload.camps || {});
+  const camps = payload.camps || {};
+  const campsNoBuits = {};
+  Object.keys(camps).forEach(function (colStr) {
+    const valor = camps[colStr];
+    if (valor !== '' && valor !== null && valor !== undefined) campsNoBuits[colStr] = valor;
+  });
+  escriureCellesRoster_(hoja, novaFila, campsNoBuits);
   return obtenirDashboardRoster_(ss);
 }
 

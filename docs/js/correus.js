@@ -14,6 +14,7 @@ const Correus = (function () {
 
   function init() {
     document.getElementById('correus-sheet-link-save').addEventListener('click', onSaveLink);
+    document.getElementById('correus-inici-btn').addEventListener('click', resetWizard);
     document.getElementById('correus-programats-btn').addEventListener('click', obrirProgramats);
     document.getElementById('correus-configurar-full-btn').addEventListener('click', onConfigurarFullNou);
 
