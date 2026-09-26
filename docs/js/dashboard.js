@@ -42,7 +42,15 @@ const Dashboard = (function () {
 
   const OBSERVACIONS_LIMIT = 70;
 
+  // Si es torna a la pestanya Dashboard abans que passin aquests mil·lisegons
+  // des de l'última càrrega reeixida (mateix sheetId), no es torna a demanar
+  // res al servidor: ja n'hi ha prou amb el que es té en memòria.
+  const CACHE_RECENT_MS = 8000;
+
   let alumnesActuals = [];
+  let tilesActuals = {};
+  let sheetIdCarregat = null;
+  let ultimaCarrega = 0;
   let filtreActiu = null;
   let cercaText = '';
   let expandedRow = null;
@@ -59,6 +67,16 @@ const Dashboard = (function () {
     document.getElementById('dashboard-students').addEventListener('click', onStudentsClick);
   }
 
+  // Desa les dades del dashboard (vinguin de getDashboard, updateCells o
+  // crearConveni, que ara també el retornen) i marca quan/de quin sheetId és,
+  // perquè load() pugui decidir si cal tornar a demanar-lo al servidor.
+  function aplicarDashboardData_(data) {
+    alumnesActuals = data.alumnes;
+    tilesActuals = data.tiles;
+    sheetIdCarregat = State.getSheetIdOficial();
+    ultimaCarrega = Date.now();
+  }
+
   async function load() {
     const wrap = document.getElementById('dashboard-no-sheet');
     const tiles = document.getElementById('dashboard-tiles');
@@ -70,6 +88,7 @@ const Dashboard = (function () {
       tiles.innerHTML = '';
       students.innerHTML = '';
       cerca.classList.add('hidden');
+      sheetIdCarregat = null;
       return;
     }
     wrap.classList.add('hidden');
@@ -79,17 +98,28 @@ const Dashboard = (function () {
     cerca.value = '';
     expandedRow = null;
     obsExpandedRows.clear();
+
+    const sheetId = State.getSheetIdOficial();
+    const jaTenimDades = sheetIdCarregat === sheetId && alumnesActuals.length > 0;
+    if (jaTenimDades) {
+      // Es mostra de seguida el que ja hi ha en memòria (encara que sigui
+      // d'una càrrega anterior) en lloc de deixar la pantalla buida mentre
+      // arriba la resposta del servidor.
+      renderTiles(tiles, tilesActuals);
+      renderStudents(students);
+      if (Date.now() - ultimaCarrega < CACHE_RECENT_MS) return;
+    }
     await refresh();
   }
 
   // Torna a demanar les dades al backend sense tocar el filtre/cerca actuals
-  // (es fa servir després de desar canvis des del panell d'edició ràpida).
+  // (es fa servir en carregar/refrescar el Dashboard).
   async function refresh() {
     const tiles = document.getElementById('dashboard-tiles');
     const students = document.getElementById('dashboard-students');
     try {
       const data = await Api.call('getDashboard', { sheetId: State.getSheetIdOficial() });
-      alumnesActuals = data.alumnes;
+      aplicarDashboardData_(data);
       renderTiles(tiles, data.tiles);
       renderStudents(students);
     } catch (err) {
@@ -355,10 +385,12 @@ const Dashboard = (function () {
     btn.disabled = true;
     btn.textContent = 'Creant…';
     try {
-      await Api.call('crearConveni', { sheetId: sheetId, afterRow: afterRow, camps: camps });
+      const data = await Api.call('crearConveni', { sheetId: sheetId, afterRow: afterRow, camps: camps });
+      aplicarDashboardData_(data);
       Util.showToast('Conveni creat.');
       expandedRow = null;
-      await refresh();
+      renderTiles(document.getElementById('dashboard-tiles'), data.tiles);
+      renderStudents(document.getElementById('dashboard-students'));
     } catch (err) {
       Util.showToast('No s\'ha pogut crear el conveni: ' + err.message, 'error');
       btn.disabled = false;
@@ -375,16 +407,21 @@ const Dashboard = (function () {
     const dataFinal = card.querySelector('.edit-data-final').value;
     const sheetId = State.getSheetIdOficial();
 
+    const cells = {};
+    cells[COL_OBSERVACIONS] = observacions;
+    cells[COL_ACORD] = acord;
+    cells[COL_DATA_INICI] = dataInici;
+    cells[COL_DATA_FINAL] = dataFinal;
+
     btn.disabled = true;
     btn.textContent = 'Desant…';
     try {
-      await Api.call('updateCell', { sheetId: sheetId, row: row, col: COL_OBSERVACIONS, value: observacions });
-      await Api.call('updateCell', { sheetId: sheetId, row: row, col: COL_ACORD, value: acord });
-      await Api.call('updateCell', { sheetId: sheetId, row: row, col: COL_DATA_INICI, value: dataInici });
-      await Api.call('updateCell', { sheetId: sheetId, row: row, col: COL_DATA_FINAL, value: dataFinal });
+      const data = await Api.call('updateCells', { sheetId: sheetId, row: row, cells: cells });
+      aplicarDashboardData_(data);
       Util.showToast('Canvis desats.');
       expandedRow = null;
-      await refresh();
+      renderTiles(document.getElementById('dashboard-tiles'), data.tiles);
+      renderStudents(document.getElementById('dashboard-students'));
     } catch (err) {
       Util.showToast('No s\'ha pogut desar: ' + err.message, 'error');
       btn.disabled = false;

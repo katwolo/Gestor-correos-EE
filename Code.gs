@@ -27,7 +27,13 @@ const BLOCS = [
   { casella: 12, plantilla: 13, adjunt: 14, data: 15 } // Bloc 3 "Valoració final" (M-P)
 ];
 
-const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'configurarFullOficial', 'insertRow', 'crearConveni', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat', 'processarEnviamentsAra'];
+const ACCIONS_MUTABLES = ['updateCell', 'updateCells', 'enviarCorreu', 'configurarFull', 'configurarFullOficial', 'insertRow', 'crearConveni', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat', 'processarEnviamentsAra'];
+
+// Subconjunt d'ACCIONS_MUTABLES que NO agafa el candicat global de doPost
+// (vegeu el comentari a doPost): enviar correus pot trigar molts segons
+// (Gmail + adjunts de Drive) i no té sentit que cap altra edició s'hagi
+// d'esperar tot aquest temps.
+const ACCIONS_LOCK_CURT = ['enviarCorreu', 'programarEnviaments', 'processarEnviamentsAra'];
 
 // Mapa de visualització (Plantilles!C fa servir aquest text amb majúscules/accents;
 // cargarPlantilles_ ho normalitza tot a minúscules per fer-hi coincidències).
@@ -218,8 +224,7 @@ function processarEnviaments_(ss) {
       resultat.avisos.forEach(function (avis) { problemes.push('Fila ' + (i + 2) + ': ' + avis); });
 
       if (resultat.errors.length === 0) {
-        hoja.getRange(i + 2, bloc.casella + 1).setValue(false);
-        hoja.getRange(i + 2, bloc.data + 1).setValue(new Date());
+        marcarEnviatBloc_(hoja, i + 2, bloc);
       } else {
         resultat.errors.forEach(function (err) {
           problemes.push('Fila ' + (i + 2) + ' (' + (err.destinatari || 'sense destinatari') + '): ' + err.error);
@@ -266,9 +271,7 @@ function enviarPlantillaPerAlumne_(hoja, hojaPlantilles, hojaRegistro, plantille
   if (resultat.errors.length === 0 && alumneRow) {
     const blocIdx = detectarBlocPerPlantilla_(plantillaNom);
     if (blocIdx !== -1) {
-      const bloc = BLOCS[blocIdx];
-      hoja.getRange(alumneRow, bloc.casella + 1).setValue(false);
-      hoja.getRange(alumneRow, bloc.data + 1).setValue(new Date());
+      marcarEnviatBloc_(hoja, alumneRow, BLOCS[blocIdx]);
     }
   }
   return resultat;
@@ -314,15 +317,21 @@ function obtenirProgramats_(ss) {
 
 // Edita la data (i opcionalment els adjunts) d'un correu programat encara
 // pendent. No es permet editar-ne un que ja s'hagi enviat o hagi fallat.
+// Data/Adjunts/Estat són contigües (columnes 4-6): es llegeixen les tres de
+// cop (abans calia una crida només per comprovar l'estat) i, si cal
+// escriure, Data i Adjunts es desen també amb una sola crida setValues().
 function actualitzarProgramat_(ss, payload) {
   const hoja = prepararHojaProgramats_(ss);
   const row = Number(payload.row);
   if (!row || row < 2 || row > hoja.getLastRow()) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
-  const estatActual = hoja.getRange(row, 6).getValue();
-  if (estatActual !== 'Pendent') { const e = new Error('Només es poden editar correus programats que encara estan pendents'); e.code = 'BAD_REQUEST'; throw e; }
 
-  if (payload.data !== undefined) hoja.getRange(row, 4).setValue(payload.data ? new Date(payload.data + 'T00:00:00') : '');
-  if (payload.adjunts !== undefined) hoja.getRange(row, 5).setValue(payload.adjunts);
+  const actual = hoja.getRange(row, 4, 1, 3).getValues()[0]; // [Data, Adjunts, Estat]
+  if (actual[2] !== 'Pendent') { const e = new Error('Només es poden editar correus programats que encara estan pendents'); e.code = 'BAD_REQUEST'; throw e; }
+
+  if (payload.data === undefined && payload.adjunts === undefined) return { ok: true };
+  const novaData = payload.data !== undefined ? (payload.data ? new Date(payload.data + 'T00:00:00') : '') : actual[0];
+  const nousAdjunts = payload.adjunts !== undefined ? payload.adjunts : actual[1];
+  hoja.getRange(row, 4, 1, 2).setValues([[novaData, nousAdjunts]]);
   return { ok: true };
 }
 
@@ -333,6 +342,31 @@ function eliminarProgramat_(ss, payload) {
   if (!row || row < 2 || row > hoja.getLastRow()) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
   hoja.deleteRow(row);
   return { ok: true };
+}
+
+// Afegeix una fila a "Programats" amb un candicat curt (mateix motiu que
+// registrarEnvio_/marcarEnviatBloc_: no s'ha de mantenir agafat mentre dura
+// cap enviament de Gmail).
+function afegirProgramat_(hojaProgramats, filaValors) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    hojaProgramats.appendRow(filaValors);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Marca el resultat ('Enviat' o 'Error: ...') d'una fila de "Programats",
+// amb el mateix candicat curt.
+function marcarResultatProgramat_(hojaProgramats, filaNum, valor) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    hojaProgramats.getRange(filaNum, 6).setValue(valor);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function processarProgramats_(ss, hoja, hojaPlantilles, hojaRegistro, plantilles) {
@@ -359,14 +393,14 @@ function processarProgramats_(ss, hoja, hojaPlantilles, hojaRegistro, plantilles
       const dades = construirInfoAlumne_(filaAlumne);
       const resultat = enviarPlantillaPerAlumne_(hoja, hojaPlantilles, hojaRegistro, plantilles, alumneRow, dades, plantillaNom, adjuntsStr);
       if (resultat.errors.length === 0) {
-        hojaProgramats.getRange(filaNum, 6).setValue('Enviat');
+        marcarResultatProgramat_(hojaProgramats, filaNum, 'Enviat');
       } else {
         const missatge = resultat.errors.map(function (e) { return e.error; }).join('; ');
-        hojaProgramats.getRange(filaNum, 6).setValue('Error: ' + missatge);
+        marcarResultatProgramat_(hojaProgramats, filaNum, 'Error: ' + missatge);
         problemes.push('Programat fila ' + filaNum + ': ' + missatge);
       }
     } catch (err) {
-      hojaProgramats.getRange(filaNum, 6).setValue('Error: ' + err.message);
+      marcarResultatProgramat_(hojaProgramats, filaNum, 'Error: ' + err.message);
       problemes.push('Programat fila ' + filaNum + ': ' + err.message);
     }
   });
@@ -400,7 +434,7 @@ function accioProgramarEnviaments_(payload, ss) {
     const dataObj = dataStr ? new Date(dataStr + 'T00:00:00') : null;
 
     if (dataObj && dataObj > ara) {
-      hojaProgramats.appendRow([payload.alumneRow, dades.nomAlumne, plantillaNom, dataObj, payload.adjunts || '', 'Pendent', new Date()]);
+      afegirProgramat_(hojaProgramats, [payload.alumneRow, dades.nomAlumne, plantillaNom, dataObj, payload.adjunts || '', 'Pendent', new Date()]);
       programats.push({ plantillaNom: plantillaNom, data: dataStr });
       return;
     }
@@ -512,11 +546,36 @@ function prepararHojaRegistro_(ss) {
   return hoja;
 }
 
+// Candicat curt (només mentre dura l'escriptura, mai durant l'enviament de
+// Gmail) perquè dos enviaments simultanis (p.ex. el trigger diari i un clic
+// manual) no escriguin la mateixa fila de "Registre" alhora — vegeu el
+// comentari a doPost sobre ACCIONS_LOCK_CURT.
 function registrarEnvio_(hoja, destinatari, assumpte, plantillaUsada, estat) {
   const fecha = new Date();
   const dataStr = Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'dd/MM/yyyy');
   const horaStr = Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'HH:mm');
-  hoja.appendRow([dataStr, horaStr, destinatari, assumpte, plantillaUsada, estat]);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    hoja.appendRow([dataStr, horaStr, destinatari, assumpte, plantillaUsada, estat]);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Marca un bloc clàssic ("Enviament" E-H/I-L/M-P) com a enviat: casella a
+// fals + data d'avui, amb un candicat curt igual que registrarEnvio_.
+// Compartida per processarEnviaments_, enviarPlantillaPerAlumne_ i
+// accioEnviarCorreu_ perquè les 3 marquin exactament igual.
+function marcarEnviatBloc_(hoja, fila, bloc) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    hoja.getRange(fila, bloc.casella + 1).setValue(false);
+    hoja.getRange(fila, bloc.data + 1).setValue(new Date());
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function cargarPlantilles_(hoja) {
@@ -865,6 +924,42 @@ function actualitzarCellaRoster_(ss, payload) {
   return { row: payload.row, col: payload.col, value: valor };
 }
 
+// Escriu diverses cel·les 1-based d'una mateixa fila (cells: {col: valor})
+// agrupant les columnes contigües en una sola crida getRange().setValues()
+// per grup, en lloc d'una crida setValue() per columna — mateix resultat,
+// menys crides a l'API de Sheets. Aplica el mateix tractament de dates que
+// actualitzarCellaRoster_ segons ROSTER_COLUMNS. Es fa servir tant des
+// d'actualitzarCellesRoster_ (acció "updateCells") com des de
+// crearConveniRoster_.
+function escriureCellesRoster_(hoja, fila, cells) {
+  const columnes = Object.keys(cells).map(Number).sort(function (a, b) { return a - b; });
+  let i = 0;
+  while (i < columnes.length) {
+    let j = i;
+    while (j + 1 < columnes.length && columnes[j + 1] === columnes[j] + 1) j++;
+    const colInici = columnes[i];
+    const valors = [];
+    for (let col = colInici; col <= columnes[j]; col++) {
+      const definicio = ROSTER_COLUMNS[col - 1];
+      let valor = cells[col];
+      if (definicio && definicio.tipus === 'data') valor = valor ? new Date(valor) : '';
+      valors.push(valor);
+    }
+    hoja.getRange(fila, colInici, 1, valors.length).setValues([valors]);
+    i = j + 1;
+  }
+}
+
+// Igual que actualitzarCellaRoster_ però per a diverses cel·les de cop
+// (payload.cells: { col1Based: valor }), i torna el dashboard recalculat en
+// la mateixa resposta — pensada pel panell ràpid del Dashboard, que abans
+// feia 4 updateCell seguits més un getDashboard per refrescar-se.
+function actualitzarCellesRoster_(ss, payload) {
+  const hoja = obtenirFullRoster_(ss);
+  escriureCellesRoster_(hoja, payload.row, payload.cells || {});
+  return obtenirDashboardRoster_(ss);
+}
+
 // Insereix una fila buida just després de `afterRow` (Sheets copia el format i
 // les validacions de la fila anterior automàticament). Serveis per afegir un
 // nou conveni/acord consecutiu per a un alumne (deixant el nom en blanc, com
@@ -878,24 +973,18 @@ function inserirFilaRoster_(ss, payload) {
 }
 
 // Igual que inserirFilaRoster_ però, en una sola crida, també escriu els
-// valors inicials del conveni nou (payload.camps: { col1Based: valor }) —
-// es fa servir des del panell ràpid del Dashboard ("Crear conveni") per
-// evitar haver de fer una crida addicional per cada camp.
+// valors inicials del conveni nou (payload.camps: { col1Based: valor }) i
+// torna el dashboard recalculat — es fa servir des del panell ràpid del
+// Dashboard ("Crear conveni") per no haver de fer cap crida addicional
+// (ni per camp ni per refrescar-se després).
 function crearConveniRoster_(ss, payload) {
   const hoja = obtenirFullRoster_(ss);
   const afterRow = Number(payload.afterRow);
   if (!afterRow || afterRow < 2) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
   hoja.insertRowAfter(afterRow);
   const novaFila = afterRow + 1;
-  const camps = payload.camps || {};
-  Object.keys(camps).forEach(function (colStr) {
-    const col = Number(colStr);
-    const definicio = ROSTER_COLUMNS[col - 1];
-    let valor = camps[colStr];
-    if (definicio && definicio.tipus === 'data') valor = valor ? new Date(valor) : '';
-    if (valor !== '' && valor !== null && valor !== undefined) hoja.getRange(novaFila, col).setValue(valor);
-  });
-  return { insertedRow: novaFila };
+  escriureCellesRoster_(hoja, novaFila, payload.camps || {});
+  return obtenirDashboardRoster_(ss);
 }
 
 // Agrupa totes les files d'un mateix alumne (diversos convenis) en un sol grup,
@@ -1100,7 +1189,15 @@ function doPost(e) {
 
     const ss = payload.sheetId ? SpreadsheetApp.openById(payload.sheetId) : null;
 
-    const necessitaLock = ACCIONS_MUTABLES.indexOf(accio) !== -1;
+    // Les accions d'enviament (Gmail + adjunts de Drive) poden trigar molts
+    // segons; NO es queden amb el candicat global durant tota la seva durada
+    // (ACCIONS_LOCK_CURT), perquè cap altra edició del Dashboard/Excel
+    // oficial n'hagi d'esperar la fi. En lloc d'això, cada escriptura
+    // puntual al Sheet que fan (registrar, marcar casella/data, cua de
+    // "Programats") agafa el seu propi candicat curt just abans d'escriure
+    // (vegeu registrarEnvio_, marcarEnviatBloc_ i afegirProgramat_/
+    // marcarResultatProgramat_).
+    const necessitaLock = ACCIONS_MUTABLES.indexOf(accio) !== -1 && ACCIONS_LOCK_CURT.indexOf(accio) === -1;
     const lock = necessitaLock ? LockService.getScriptLock() : null;
     if (lock) lock.waitLock(10000);
     try {
@@ -1126,6 +1223,7 @@ function executarAccio_(accio, payload, ss) {
     case 'getSheetData': return obtenirDadesRoster_(ss);
     case 'configurarFullOficial': return { canvis: configurarFullOficial_(ss) };
     case 'updateCell': return actualitzarCellaRoster_(ss, payload);
+    case 'updateCells': return actualitzarCellesRoster_(ss, payload);
     case 'insertRow': return inserirFilaRoster_(ss, payload);
     case 'crearConveni': return crearConveniRoster_(ss, payload);
     case 'getPlantilles': return obtenirPlantillesApi_(ss);
@@ -1180,10 +1278,22 @@ function actualitzarPlantilla_(ss, payload) {
 
 // Permet editar el nom i el correu del tutor/a d'empresa (columnes C/D) d'un
 // alumne des de la mateixa web, sense haver d'obrir el Sheet directament.
+// C i D són contigües: si arriben els dos camps de cop (el cas normal des
+// de la web), s'escriuen amb una sola crida setValues() en lloc de dues
+// setValue() seguides; si només arriba un dels dos, es llegeix abans
+// l'altre perquè no es perdi (mateix resultat que abans).
 function actualitzarTutorAlumne_(ss, payload) {
   const hoja = ss.getSheetByName(SHEETS.ENVIAMENT);
-  if (payload.nomTutor !== undefined) hoja.getRange(payload.alumneRow, 3).setValue(payload.nomTutor);
-  if (payload.correuTutor !== undefined) hoja.getRange(payload.alumneRow, 4).setValue(payload.correuTutor);
+  if (payload.nomTutor === undefined && payload.correuTutor === undefined) return { ok: true };
+
+  let nomTutor = payload.nomTutor;
+  let correuTutor = payload.correuTutor;
+  if (nomTutor === undefined || correuTutor === undefined) {
+    const actual = hoja.getRange(payload.alumneRow, 3, 1, 2).getValues()[0];
+    if (nomTutor === undefined) nomTutor = actual[0];
+    if (correuTutor === undefined) correuTutor = actual[1];
+  }
+  hoja.getRange(payload.alumneRow, 3, 1, 2).setValues([[nomTutor, correuTutor]]);
   return { ok: true };
 }
 
@@ -1252,9 +1362,7 @@ function accioEnviarCorreu_(payload, ss) {
   if (resultat.errors.length === 0) {
     const blocIdx = detectarBlocPerPlantilla_(payload.plantillaNom);
     if (blocIdx !== -1) {
-      const bloc = BLOCS[blocIdx];
-      hoja.getRange(payload.alumneRow, bloc.casella + 1).setValue(false);
-      hoja.getRange(payload.alumneRow, bloc.data + 1).setValue(new Date());
+      marcarEnviatBloc_(hoja, payload.alumneRow, BLOCS[blocIdx]);
     }
   }
 
