@@ -1027,6 +1027,13 @@ function obtenirDashboardRoster_(ss) {
     const fase = calcularFaseAcord_(acord);
     const dataIniciVal = row[10];
     const dataFinalVal = row[11];
+    // Hores del conveni actual (última fila) tot sol, per pintar-les de
+    // manera diferent a la barra del Dashboard mentre el conveni encara no
+    // ha acabat (Data final buida o futura).
+    const horesConveniActual = parseHores_(row[ROSTER_IDX.HORES]);
+    const avui = new Date();
+    avui.setHours(0, 0, 0, 0);
+    const conveniActualFinalitzat = dataFinalVal instanceof Date && dataFinalVal < avui;
 
     return {
       primeraFila: g.primeraFila,
@@ -1049,6 +1056,8 @@ function obtenirDashboardRoster_(ss) {
       horesFetes: horesFetes,
       horesObjectiu: horesObjectiu,
       horesPendents: horesPendents,
+      horesConveniActual: horesConveniActual,
+      conveniActualFinalitzat: conveniActualFinalitzat,
       faseConveni: fase.etiqueta,
       faseConveniIndex: fase.index,
       faseConveniTotal: fase.total

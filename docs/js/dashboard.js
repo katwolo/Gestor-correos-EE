@@ -37,6 +37,7 @@ const Dashboard = (function () {
   const COL_DATA_INICI = 11;
   const COL_DATA_FINAL = 12;
   const COL_ACORD = 13;
+  const COL_HORES = 29;
   const COL_OBSERVACIONS = 28;
 
   const OBSERVACIONS_LIMIT = 70;
@@ -210,13 +211,28 @@ const Dashboard = (function () {
   // Barra 1: hores fetes del quadern (sempre sobre 515h) sumant les hores
   // reals de TOTS els convenis de l'alumne més les "hores de regal" de
   // l'exempció (25%/50%/100% de 515h comptades com si ja s'haguessin fet).
+  // Les hores que vénen del conveni ACTUAL i que encara no ha arribat a la
+  // seva Data final es pinten amb un patró ratllat (blanc/vermell) en lloc
+  // del color sòlid, per distingir-les de les ja tancades; en passar la
+  // Data final, passen a comptar-se com les altres (color sòlid).
   function renderHoresBar(a) {
-    const pct = (a.horesFetes / a.horesObjectiu) * 100;
     const fetes = Math.round(a.horesFetes * 10) / 10;
     const objectiu = Math.round(a.horesObjectiu * 10) / 10;
     const pendents = Math.round(a.horesPendents * 10) / 10;
     const label = 'Quadern: ' + fetes + 'h / ' + objectiu + 'h' + (pendents > 0 ? ' · falten ' + pendents + 'h' : ' · complet');
-    return renderProgressBar(pct, pct >= 100 ? 'progress-done' : 'progress-hores', Util.escapeHtml(label));
+
+    const horesPendentsFinalitzar = a.conveniActualFinalitzat ? 0 : Math.max(0, Math.min(a.horesConveniActual || 0, a.horesFetes));
+    const horesSolides = a.horesFetes - horesPendentsFinalitzar;
+    const pctSolid = Math.max(0, Math.min(100, (horesSolides / a.horesObjectiu) * 100));
+    const pctRatllat = Math.max(0, Math.min(100 - pctSolid, (horesPendentsFinalitzar / a.horesObjectiu) * 100));
+    const colorClass = (pctSolid + pctRatllat) >= 100 ? 'progress-done' : 'progress-hores';
+
+    return '<div class="progress-bar-wrap">' +
+      '<div class="progress-bar-label">' + Util.escapeHtml(label) + '</div>' +
+      '<div class="progress-bar">' +
+      '<div class="progress-bar-fill ' + colorClass + '" style="width:' + pctSolid + '%"></div>' +
+      (pctRatllat > 0 ? '<div class="progress-bar-fill progress-bar-fill-pending" style="width:' + pctRatllat + '%"></div>' : '') +
+      '</div></div>';
   }
 
   // Barra 2: en quin punt està l'"Acord (ref05) i pla activitats (ref06)"
@@ -312,6 +328,7 @@ const Dashboard = (function () {
       '<div class="form-row"><label>Data inici</label><input type="date" class="crear-data-inici"></div>' +
       '<div class="form-row"><label>Data final</label><input type="date" class="crear-data-final"></div>' +
       '</div>' +
+      '<div class="form-row"><label>Hores realitzades total</label><input type="number" min="0" step="0.5" class="crear-hores"></div>' +
       '<div class="form-row"><label>Acord (ref05) i pla activitats (ref06)</label>' +
       '<select class="crear-acord">' + acordOptionsHtml('') + '</select></div>' +
       '<div class="form-row"><label>Observacions</label><textarea class="crear-observacions" rows="3"></textarea></div>' +
@@ -331,6 +348,7 @@ const Dashboard = (function () {
     camps[COL_NUMERO_ACORD] = card.querySelector('.crear-numero-acord').value;
     camps[COL_DATA_INICI] = card.querySelector('.crear-data-inici').value;
     camps[COL_DATA_FINAL] = card.querySelector('.crear-data-final').value;
+    camps[COL_HORES] = card.querySelector('.crear-hores').value;
     camps[COL_ACORD] = card.querySelector('.crear-acord').value;
     camps[COL_OBSERVACIONS] = card.querySelector('.crear-observacions').value;
 
