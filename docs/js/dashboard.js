@@ -21,12 +21,19 @@ const Dashboard = (function () {
     ambExempcio: function (a) { return a.teExempcio; }
   };
 
-  // Opcions del desplegable "Acord" al panell d'edició ràpida del Dashboard.
-  // És la llista per defecte de l'app (mateixa que ROSTER_COLUMNS a Code.gs),
-  // no una consulta en viu del Sheet, perquè obrir el panell sigui immediat.
+  // Opcions dels desplegables del panell d'edició ràpida del Dashboard. És la
+  // llista per defecte de l'app (mateixa que ROSTER_COLUMNS a Code.gs), no
+  // una consulta en viu del Sheet, perquè obrir el panell sigui immediat.
   const ACORD_OPTIONS = ['Entrega sol·licitud dades', 'He enviat el circuit', 'Signat per tothom'];
+  const SI_NO_OPTIONS = ['SI', 'NO'];
 
   // Columnes (1-based) de "Excel oficial" que toca el panell d'edició ràpida.
+  const COL_PRACTIQUES = 3;
+  const COL_NIF_EMPRESA = 6;
+  const COL_NOM_EMPRESA = 7;
+  const COL_R02 = 8;
+  const COL_R03 = 9;
+  const COL_NUMERO_ACORD = 10;
   const COL_DATA_INICI = 11;
   const COL_DATA_FINAL = 12;
   const COL_ACORD = 13;
@@ -38,6 +45,7 @@ const Dashboard = (function () {
   let filtreActiu = null;
   let cercaText = '';
   let expandedRow = null;
+  let panelTab = 'seguiment'; // 'seguiment' | 'crear' — pestanya activa del panell obert
   const obsExpandedRows = new Set();
 
   function init() {
@@ -128,12 +136,27 @@ const Dashboard = (function () {
     const saveBtn = ev.target.closest('.edit-save-btn');
     if (saveBtn) { guardarPanell(saveBtn); return; }
 
+    const tabBtn = ev.target.closest('.panel-tab-btn');
+    if (tabBtn) {
+      panelTab = tabBtn.dataset.tab;
+      renderStudents(document.getElementById('dashboard-students'));
+      return;
+    }
+
+    const crearBtn = ev.target.closest('.crear-conveni-btn');
+    if (crearBtn) { crearConveni(crearBtn); return; }
+
     if (ev.target.closest('.student-edit-panel')) return;
 
     const header = ev.target.closest('.student-card-header');
     if (header) {
       const row = Number(header.closest('.student-card').dataset.row);
-      expandedRow = expandedRow === row ? null : row;
+      if (expandedRow === row) {
+        expandedRow = null;
+      } else {
+        expandedRow = row;
+        panelTab = 'seguiment';
+      }
       renderStudents(document.getElementById('dashboard-students'));
     }
   }
@@ -229,26 +252,100 @@ const Dashboard = (function () {
       (a.teExempcio ? ' · <strong>Exempció: ' + Util.escapeHtml(a.exempcio) + '</strong>' : '') + '</div>';
   }
 
-  // Panell d'edició ràpida: Observacions, Acord, Data inici, Data final —
-  // en aquest ordre — amb un únic botó "Guardar" per a tot el panell.
-  function renderEditPanel(a) {
-    const acordActual = a.acord || '';
+  function acordOptionsHtml(acordActual) {
     const opcions = [{ value: '', label: '(Pendent)' }].concat(ACORD_OPTIONS.map(function (o) { return { value: o, label: o }; }));
-    const opcionsHtml = opcions.map(function (o) {
+    return opcions.map(function (o) {
       return '<option value="' + Util.escapeHtml(o.value) + '"' + (o.value === acordActual ? ' selected' : '') + '>' + Util.escapeHtml(o.label) + '</option>';
     }).join('');
+  }
 
+  function siNoOptionsHtml(actual) {
+    const opcions = [{ value: '', label: '' }].concat(SI_NO_OPTIONS.map(function (o) { return { value: o, label: o }; }));
+    return opcions.map(function (o) {
+      return '<option value="' + Util.escapeHtml(o.value) + '"' + (o.value === actual ? ' selected' : '') + '>' + Util.escapeHtml(o.label) + '</option>';
+    }).join('');
+  }
+
+  // Panell d'edició ràpida amb dues pestanyes: "Crear conveni" (nova fila
+  // per a un conveni addicional) i "Seguiment" (editar el conveni actual).
+  function renderEditPanel(a) {
     return '<div class="student-edit-panel">' +
-      '<div class="form-row"><label>Observacions</label>' +
+      '<div class="panel-tabs">' +
+      '<button type="button" class="panel-tab-btn' + (panelTab === 'crear' ? ' active' : '') + '" data-tab="crear">Crear conveni</button>' +
+      '<button type="button" class="panel-tab-btn' + (panelTab === 'seguiment' ? ' active' : '') + '" data-tab="seguiment">Seguiment</button>' +
+      '</div>' +
+      (panelTab === 'crear' ? renderCrearConveniForm(a) : renderSeguimentForm(a)) +
+      '</div>';
+  }
+
+  // Pestanya "Seguiment": Observacions, Acord, Data inici, Data final del
+  // conveni actual (última fila) — en aquest ordre — amb un únic botó
+  // "Guardar" per a tot el panell.
+  function renderSeguimentForm(a) {
+    return '<div class="form-row"><label>Observacions</label>' +
       '<textarea class="edit-observacions" rows="3">' + Util.escapeHtml(a.observacions || '') + '</textarea></div>' +
       '<div class="form-row"><label>Acord (ref05) i pla activitats (ref06)</label>' +
-      '<select class="edit-acord">' + opcionsHtml + '</select></div>' +
+      '<select class="edit-acord">' + acordOptionsHtml(a.acord || '') + '</select></div>' +
       '<div class="edit-dates-row">' +
       '<div class="form-row"><label>Data inici</label><input type="date" class="edit-data-inici" value="' + Util.escapeHtml(a.dataInici || '') + '"></div>' +
       '<div class="form-row"><label>Data final</label><input type="date" class="edit-data-final" value="' + Util.escapeHtml(a.dataFinal || '') + '"></div>' +
       '</div>' +
-      '<button type="button" class="btn-primary edit-save-btn">Guardar</button>' +
-      '</div>';
+      '<button type="button" class="btn-primary edit-save-btn">Guardar</button>';
+  }
+
+  // Pestanya "Crear conveni": formulari en blanc per a un conveni addicional
+  // de l'alumne. En guardar es crea una fila nova a "Excel oficial" just
+  // sota l'última del grup (com el "+ fila" d'Excel oficial) i s'hi escriuen
+  // aquests camps en una sola crida al backend.
+  function renderCrearConveniForm() {
+    return '<p class="hint-text">Es crearà una fila nova per a un conveni addicional d\'aquest alumne.</p>' +
+      '<div class="form-row"><label>Ha començat pràctiques aquest curs</label>' +
+      '<select class="crear-practiques">' + siNoOptionsHtml('') + '</select></div>' +
+      '<div class="form-row"><label>CIF empresa</label><input type="text" class="crear-cif-empresa"></div>' +
+      '<div class="form-row"><label>Nom de l\'empresa</label><input type="text" class="crear-nom-empresa"></div>' +
+      '<div class="edit-dates-row">' +
+      '<div class="form-row"><label>R02</label><select class="crear-r02">' + siNoOptionsHtml('') + '</select></div>' +
+      '<div class="form-row"><label>R03</label><select class="crear-r03">' + siNoOptionsHtml('') + '</select></div>' +
+      '</div>' +
+      '<div class="form-row"><label>Número d\'acord</label><input type="text" class="crear-numero-acord"></div>' +
+      '<div class="edit-dates-row">' +
+      '<div class="form-row"><label>Data inici</label><input type="date" class="crear-data-inici"></div>' +
+      '<div class="form-row"><label>Data final</label><input type="date" class="crear-data-final"></div>' +
+      '</div>' +
+      '<div class="form-row"><label>Acord (ref05) i pla activitats (ref06)</label>' +
+      '<select class="crear-acord">' + acordOptionsHtml('') + '</select></div>' +
+      '<div class="form-row"><label>Observacions</label><textarea class="crear-observacions" rows="3"></textarea></div>' +
+      '<button type="button" class="btn-primary crear-conveni-btn">Crear conveni</button>';
+  }
+
+  async function crearConveni(btn) {
+    const card = btn.closest('.student-card');
+    const afterRow = Number(card.dataset.row);
+    const sheetId = State.getSheetIdOficial();
+    const camps = {};
+    camps[COL_PRACTIQUES] = card.querySelector('.crear-practiques').value;
+    camps[COL_NIF_EMPRESA] = card.querySelector('.crear-cif-empresa').value;
+    camps[COL_NOM_EMPRESA] = card.querySelector('.crear-nom-empresa').value;
+    camps[COL_R02] = card.querySelector('.crear-r02').value;
+    camps[COL_R03] = card.querySelector('.crear-r03').value;
+    camps[COL_NUMERO_ACORD] = card.querySelector('.crear-numero-acord').value;
+    camps[COL_DATA_INICI] = card.querySelector('.crear-data-inici').value;
+    camps[COL_DATA_FINAL] = card.querySelector('.crear-data-final').value;
+    camps[COL_ACORD] = card.querySelector('.crear-acord').value;
+    camps[COL_OBSERVACIONS] = card.querySelector('.crear-observacions').value;
+
+    btn.disabled = true;
+    btn.textContent = 'Creant…';
+    try {
+      await Api.call('crearConveni', { sheetId: sheetId, afterRow: afterRow, camps: camps });
+      Util.showToast('Conveni creat.');
+      expandedRow = null;
+      await refresh();
+    } catch (err) {
+      Util.showToast('No s\'ha pogut crear el conveni: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Crear conveni';
+    }
   }
 
   async function guardarPanell(btn) {

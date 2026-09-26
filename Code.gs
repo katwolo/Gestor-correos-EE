@@ -27,7 +27,7 @@ const BLOCS = [
   { casella: 12, plantilla: 13, adjunt: 14, data: 15 } // Bloc 3 "Valoració final" (M-P)
 ];
 
-const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'configurarFullOficial', 'insertRow', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat', 'processarEnviamentsAra'];
+const ACCIONS_MUTABLES = ['updateCell', 'enviarCorreu', 'configurarFull', 'configurarFullOficial', 'insertRow', 'crearConveni', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat', 'processarEnviamentsAra'];
 
 // Mapa de visualització (Plantilles!C fa servir aquest text amb majúscules/accents;
 // cargarPlantilles_ ho normalitza tot a minúscules per fer-hi coincidències).
@@ -877,6 +877,27 @@ function inserirFilaRoster_(ss, payload) {
   return { insertedRow: afterRow + 1 };
 }
 
+// Igual que inserirFilaRoster_ però, en una sola crida, també escriu els
+// valors inicials del conveni nou (payload.camps: { col1Based: valor }) —
+// es fa servir des del panell ràpid del Dashboard ("Crear conveni") per
+// evitar haver de fer una crida addicional per cada camp.
+function crearConveniRoster_(ss, payload) {
+  const hoja = obtenirFullRoster_(ss);
+  const afterRow = Number(payload.afterRow);
+  if (!afterRow || afterRow < 2) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
+  hoja.insertRowAfter(afterRow);
+  const novaFila = afterRow + 1;
+  const camps = payload.camps || {};
+  Object.keys(camps).forEach(function (colStr) {
+    const col = Number(colStr);
+    const definicio = ROSTER_COLUMNS[col - 1];
+    let valor = camps[colStr];
+    if (definicio && definicio.tipus === 'data') valor = valor ? new Date(valor) : '';
+    if (valor !== '' && valor !== null && valor !== undefined) hoja.getRange(novaFila, col).setValue(valor);
+  });
+  return { insertedRow: novaFila };
+}
+
 // Agrupa totes les files d'un mateix alumne (diversos convenis) en un sol grup,
 // tant si les files addicionals deixen el nom en blanc (continuació) com si hi
 // repeteixen el nom (p.ex. en afegir manualment una fila nova). El grup sempre
@@ -1097,6 +1118,7 @@ function executarAccio_(accio, payload, ss) {
     case 'configurarFullOficial': return { canvis: configurarFullOficial_(ss) };
     case 'updateCell': return actualitzarCellaRoster_(ss, payload);
     case 'insertRow': return inserirFilaRoster_(ss, payload);
+    case 'crearConveni': return crearConveniRoster_(ss, payload);
     case 'getPlantilles': return obtenirPlantillesApi_(ss);
     case 'updatePlantilla': return actualitzarPlantilla_(ss, payload);
     case 'getStudents': return obtenirAlumnes_(ss);
