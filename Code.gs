@@ -1094,13 +1094,13 @@ function obtenirDashboardRoster_(ss) {
   const hoja = obtenirFullRoster_(ss);
   const last = hoja.getLastRow();
   if (last < 3) {
-    return { tiles: { actius: 0, finalitzats: 0, pendentsDocumentacio: 0, ambExempcio: 0, total: 0 }, alumnes: [] };
+    return { tiles: { actius: 0, finalitzats: 0, pendentsDocumentacio: 0, total: 0 }, alumnes: [] };
   }
 
   const files = hoja.getRange(3, 1, last - 2, ROSTER_COLUMNS.length).getValues();
   const grups = agruparAlumnesRoster_(files, 3);
 
-  let actius = 0, finalitzats = 0, pendentsDocumentacio = 0, ambExempcio = 0;
+  let actius = 0, finalitzats = 0, pendentsDocumentacio = 0;
   const alumnes = grups.map(function (g) {
     const row = g.estat;
     const practiques = row[ROSTER_IDX.PRACTIQUES];
@@ -1112,12 +1112,14 @@ function obtenirDashboardRoster_(ss) {
 
     const finalitzat = !!notaFinal;
     const actiu = !finalitzat && practiques === 'SI';
-    const faltaDocument = !finalitzat && (acord !== 'Signat per tothom' || quadern !== 'Enviat definitiu');
+    // Pendent de documentació: només mira l'"Acord (ref05) i pla activitats
+    // (ref06)" (columna M) — abans també exigia el "R22 (Quadern FCT)" en
+    // "Enviat definitiu", però ja no.
+    const faltaDocument = !finalitzat && acord !== 'Signat per tothom';
 
     if (finalitzat) finalitzats++;
     else if (actiu) actius++;
     if (actiu && faltaDocument) pendentsDocumentacio++;
-    if (teExempcioActiva) ambExempcio++;
 
     // L'exempció ja NO redueix l'objectiu de 515h: en lloc d'això, el seu
     // percentatge es compta com a hores ja fetes (25% de 515h = 128,75h "de
@@ -1174,7 +1176,6 @@ function obtenirDashboardRoster_(ss) {
       actius: actius,
       finalitzats: finalitzats,
       pendentsDocumentacio: pendentsDocumentacio,
-      ambExempcio: ambExempcio,
       total: grups.length
     },
     alumnes: alumnes

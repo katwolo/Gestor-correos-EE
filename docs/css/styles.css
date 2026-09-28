@@ -180,7 +180,6 @@ html, body {
 .tile[data-tile="actius"]::before { background: var(--primary); }
 .tile[data-tile="finalitzats"]::before { background: var(--success); }
 .tile[data-tile="pendentsDocumentacio"]::before { background: var(--warn); }
-.tile[data-tile="ambExempcio"]::before { background: var(--exempt); }
 
 .tile .tile-value { font-size: 1.8rem; font-weight: 700; }
 .tile .tile-label { color: var(--text-muted); font-size: 0.8rem; }

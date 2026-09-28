@@ -3,7 +3,6 @@ const Dashboard = (function () {
     actius: 'Actius',
     finalitzats: 'Finalitzats',
     pendentsDocumentacio: 'Pendents de documentació',
-    ambExempcio: 'Amb exempció de pràctiques',
     total: 'Total alumnat'
   };
 
@@ -17,8 +16,7 @@ const Dashboard = (function () {
   const TILE_FILTERS = {
     actius: function (a) { return a.actiu; },
     finalitzats: function (a) { return a.finalitzat; },
-    pendentsDocumentacio: function (a) { return a.actiu && a.faltaDocument; },
-    ambExempcio: function (a) { return a.teExempcio; }
+    pendentsDocumentacio: function (a) { return a.actiu && a.faltaDocument; }
   };
 
   // Opcions dels desplegables del panell d'edició ràpida del Dashboard. És la
@@ -324,9 +322,9 @@ const Dashboard = (function () {
       '</div>';
   }
 
-  // Pestanya "Seguiment": Observacions, Acord, Data inici, Data final del
-  // conveni actual (última fila) — en aquest ordre — amb un únic botó
-  // "Guardar" per a tot el panell.
+  // Pestanya "Seguiment": Observacions, Acord, Data inici, Data final i
+  // Hores realitzades total del conveni actual (última fila) — en aquest
+  // ordre — amb un únic botó "Guardar" per a tot el panell.
   function renderSeguimentForm(a) {
     return '<div class="form-row"><label>Observacions</label>' +
       '<textarea class="edit-observacions" rows="3">' + Util.escapeHtml(a.observacions || '') + '</textarea></div>' +
@@ -336,6 +334,7 @@ const Dashboard = (function () {
       '<div class="form-row"><label>Data inici</label><input type="date" class="edit-data-inici" value="' + Util.escapeHtml(a.dataInici || '') + '"></div>' +
       '<div class="form-row"><label>Data final</label><input type="date" class="edit-data-final" value="' + Util.escapeHtml(a.dataFinal || '') + '"></div>' +
       '</div>' +
+      '<div class="form-row"><label>Hores realitzades total</label><input type="number" min="0" step="0.5" class="edit-hores" value="' + Util.escapeHtml(a.horesConveniActual || '') + '"></div>' +
       '<button type="button" class="btn-primary edit-save-btn">Guardar</button>';
   }
 
@@ -405,6 +404,7 @@ const Dashboard = (function () {
     const acord = card.querySelector('.edit-acord').value;
     const dataInici = card.querySelector('.edit-data-inici').value;
     const dataFinal = card.querySelector('.edit-data-final').value;
+    const hores = card.querySelector('.edit-hores').value;
     const sheetId = State.getSheetIdOficial();
 
     const cells = {};
@@ -412,6 +412,7 @@ const Dashboard = (function () {
     cells[COL_ACORD] = acord;
     cells[COL_DATA_INICI] = dataInici;
     cells[COL_DATA_FINAL] = dataFinal;
+    cells[COL_HORES] = hores;
 
     btn.disabled = true;
     btn.textContent = 'Desant…';
