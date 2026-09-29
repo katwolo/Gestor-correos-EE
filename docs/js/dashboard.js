@@ -52,8 +52,14 @@ const Dashboard = (function () {
   let filtreActiu = null;
   let cercaText = '';
   let expandedRow = null;
-  let panelTab = 'seguiment'; // 'seguiment' | 'crear' — pestanya activa del panell obert
+  let panelTab = 'seguiment'; // 'seguiment' | 'crear' | 'tot' — pestanya activa del panell obert
   const obsExpandedRows = new Set();
+
+  // Estat de la pestanya "Tot": quina fila (conveni) concret s'està veient i
+  // les seves dades completes, carregades a demanda (getConveniComplet).
+  let totFilaSeleccionada = null;
+  let totDades = null;
+  let totCarregant = false;
 
   function init() {
     const input = document.getElementById('dashboard-cerca-alumne');
@@ -168,9 +174,20 @@ const Dashboard = (function () {
     const tabBtn = ev.target.closest('.panel-tab-btn');
     if (tabBtn) {
       panelTab = tabBtn.dataset.tab;
+      if (panelTab === 'tot' && totFilaSeleccionada === null) {
+        const card = tabBtn.closest('.student-card');
+        const a = alumnesActuals.find(function (al) { return al.ultimaFila === Number(card.dataset.row); });
+        if (a) { seleccionarFilaTot_(a.ultimaFila); return; }
+      }
       renderStudents(document.getElementById('dashboard-students'));
       return;
     }
+
+    const filaBtn = ev.target.closest('.tot-fila-btn');
+    if (filaBtn) { seleccionarFilaTot_(Number(filaBtn.dataset.fila)); return; }
+
+    const eliminarBtn = ev.target.closest('.tot-eliminar-btn');
+    if (eliminarBtn) { eliminarConveni(eliminarBtn); return; }
 
     const crearBtn = ev.target.closest('.crear-conveni-btn');
     if (crearBtn) { crearConveni(crearBtn); return; }
@@ -185,8 +202,55 @@ const Dashboard = (function () {
       } else {
         expandedRow = row;
         panelTab = 'seguiment';
+        totFilaSeleccionada = null;
+        totDades = null;
+        totCarregant = false;
       }
       renderStudents(document.getElementById('dashboard-students'));
+    }
+  }
+
+  // Carrega (o torna a carregar) les dades completes d'un conveni concret
+  // per a la pestanya "Tot". Si l'usuari canvia de fila mentre encara s'està
+  // carregant l'anterior, la resposta obsoleta s'ignora.
+  async function seleccionarFilaTot_(row) {
+    totFilaSeleccionada = row;
+    totDades = null;
+    totCarregant = true;
+    renderStudents(document.getElementById('dashboard-students'));
+    try {
+      const data = await Api.call('getConveniComplet', { sheetId: State.getSheetIdOficial(), row: row });
+      if (totFilaSeleccionada !== row) return;
+      totDades = data;
+    } catch (err) {
+      if (totFilaSeleccionada !== row) return;
+      Util.showToast('No s\'ha pogut carregar el conveni: ' + err.message, 'error');
+    } finally {
+      if (totFilaSeleccionada === row) totCarregant = false;
+      renderStudents(document.getElementById('dashboard-students'));
+    }
+  }
+
+  async function eliminarConveni(btn) {
+    const row = totFilaSeleccionada;
+    if (!row) return;
+    const ok = confirm('Segur que vols eliminar aquesta fila sencera de "Excel oficial"? Aquesta acció no es pot desfer.');
+    if (!ok) return;
+
+    const sheetId = State.getSheetIdOficial();
+    btn.disabled = true;
+    try {
+      const data = await Api.call('deleteConveni', { sheetId: sheetId, row: row });
+      aplicarDashboardData_(data);
+      Util.showToast('Fila eliminada.');
+      expandedRow = null;
+      totFilaSeleccionada = null;
+      totDades = null;
+      renderTiles(document.getElementById('dashboard-tiles'), data.tiles);
+      renderStudents(document.getElementById('dashboard-students'));
+    } catch (err) {
+      Util.showToast('No s\'ha pogut eliminar: ' + err.message, 'error');
+      btn.disabled = false;
     }
   }
 
@@ -310,15 +374,17 @@ const Dashboard = (function () {
     }).join('');
   }
 
-  // Panell d'edició ràpida amb dues pestanyes: "Crear conveni" (nova fila
-  // per a un conveni addicional) i "Seguiment" (editar el conveni actual).
+  // Panell d'edició ràpida amb tres pestanyes: "Crear conveni" (nova fila
+  // per a un conveni addicional), "Seguiment" (editar el conveni actual) i
+  // "Tot" (veure/eliminar qualsevol conveni sencer de l'alumne).
   function renderEditPanel(a) {
     return '<div class="student-edit-panel">' +
       '<div class="panel-tabs">' +
       '<button type="button" class="panel-tab-btn' + (panelTab === 'crear' ? ' active' : '') + '" data-tab="crear">Crear conveni</button>' +
       '<button type="button" class="panel-tab-btn' + (panelTab === 'seguiment' ? ' active' : '') + '" data-tab="seguiment">Seguiment</button>' +
+      '<button type="button" class="panel-tab-btn' + (panelTab === 'tot' ? ' active' : '') + '" data-tab="tot">Tot</button>' +
       '</div>' +
-      (panelTab === 'crear' ? renderCrearConveniForm(a) : renderSeguimentForm(a)) +
+      (panelTab === 'crear' ? renderCrearConveniForm(a) : panelTab === 'tot' ? renderTotForm(a) : renderSeguimentForm(a)) +
       '</div>';
   }
 
@@ -362,6 +428,33 @@ const Dashboard = (function () {
       '<select class="crear-acord">' + acordOptionsHtml('') + '</select></div>' +
       '<div class="form-row"><label>Observacions</label><textarea class="crear-observacions" rows="3"></textarea></div>' +
       '<button type="button" class="btn-primary crear-conveni-btn">Crear conveni</button>';
+  }
+
+  // Pestanya "Tot": permet triar quin conveni de l'alumne es vol veure (1 =
+  // el més antic, el número més alt = el conveni actual) i en mostra totes
+  // les columnes tal com estan a "Excel oficial", amb un botó per eliminar
+  // sencera aquesta fila al final.
+  function renderTotForm(a) {
+    const files = (a.filesConveni && a.filesConveni.length) ? a.filesConveni : [a.ultimaFila];
+    const botonsFila = files.map(function (fila, idx) {
+      const actiu = totFilaSeleccionada === fila;
+      return '<button type="button" class="tot-fila-btn' + (actiu ? ' active' : '') + '" data-fila="' + fila + '">' + (idx + 1) + '</button>';
+    }).join('');
+
+    let contingutHtml;
+    if (totCarregant) {
+      contingutHtml = '<p class="hint-text">Carregant…</p>';
+    } else if (totDades) {
+      contingutHtml = '<div class="tot-camps">' + totDades.camps.map(function (c) {
+        return '<div class="tot-camp"><span class="tot-camp-label">' + Util.escapeHtml(c.header) + '</span>' +
+          '<span class="tot-camp-valor">' + Util.escapeHtml(c.valor || '—') + '</span></div>';
+      }).join('') + '</div>' +
+        '<button type="button" class="btn-danger tot-eliminar-btn">🗑️ Eliminar aquesta fila</button>';
+    } else {
+      contingutHtml = '<p class="hint-text">Selecciona un conveni per veure\'n les dades.</p>';
+    }
+
+    return '<div class="tot-selector"><span class="hint-text">Conveni:</span>' + botonsFila + '</div>' + contingutHtml;
   }
 
   async function crearConveni(btn) {

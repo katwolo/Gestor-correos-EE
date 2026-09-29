@@ -27,7 +27,7 @@ const BLOCS = [
   { casella: 12, plantilla: 13, adjunt: 14, data: 15 } // Bloc 3 "Valoració final" (M-P)
 ];
 
-const ACCIONS_MUTABLES = ['updateCell', 'updateCells', 'enviarCorreu', 'configurarFull', 'configurarFullOficial', 'insertRow', 'crearConveni', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat', 'processarEnviamentsAra'];
+const ACCIONS_MUTABLES = ['updateCell', 'updateCells', 'enviarCorreu', 'configurarFull', 'configurarFullOficial', 'insertRow', 'crearConveni', 'deleteConveni', 'updatePlantilla', 'updateAlumneTutor', 'programarEnviaments', 'updateProgramat', 'deleteProgramat', 'processarEnviamentsAra'];
 
 // Subconjunt d'ACCIONS_MUTABLES que NO agafa el candicat global de doPost
 // (vegeu el comentari a doPost): enviar correus pot trigar molts segons
@@ -1003,6 +1003,35 @@ function crearConveniRoster_(ss, payload) {
   return obtenirDashboardRoster_(ss);
 }
 
+// Retorna tots els valors d'UNA fila concreta de "Excel oficial", en l'ordre
+// de ROSTER_COLUMNS i ja formatats per mostrar (les dates com a dd/MM/yyyy,
+// la resta tal qual) — es fa servir des de la pestanya "Tot" del panell
+// ràpid del Dashboard per veure un conveni concret sense haver d'anar a la
+// graella sencera.
+function obtenirConveniComplet_(ss, payload) {
+  const hoja = obtenirFullRoster_(ss);
+  const row = Number(payload.row);
+  if (!row || row < 3 || row > hoja.getLastRow()) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
+  const valors = hoja.getRange(row, 1, 1, ROSTER_COLUMNS.length).getValues()[0];
+  const camps = ROSTER_COLUMNS.map(function (col, idx) {
+    let valor = valors[idx];
+    if (valor instanceof Date) valor = Utilities.formatDate(valor, Session.getScriptTimeZone(), 'dd/MM/yyyy');
+    return { header: col.header, valor: (valor === '' || valor === null || valor === undefined) ? '' : String(valor) };
+  });
+  return { row: row, camps: camps };
+}
+
+// Elimina sencera una fila (conveni) de "Excel oficial" i torna el dashboard
+// recalculat — es fa servir des de la pestanya "Tot" del panell ràpid del
+// Dashboard. Si era l'única fila de l'alumne, deixa de sortir al Dashboard.
+function eliminarConveniRoster_(ss, payload) {
+  const hoja = obtenirFullRoster_(ss);
+  const row = Number(payload.row);
+  if (!row || row < 3 || row > hoja.getLastRow()) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
+  hoja.deleteRow(row);
+  return obtenirDashboardRoster_(ss);
+}
+
 // Agrupa totes les files d'un mateix alumne (diversos convenis) en un sol grup,
 // tant si les files addicionals deixen el nom en blanc (continuació) com si hi
 // repeteixen el nom (p.ex. en afegir manualment una fila nova). El grup sempre
@@ -1023,6 +1052,7 @@ function agruparAlumnesRoster_(files, primeraFilaNum) {
   function afegirFilaAlGrup_(g, row, filaNum) {
     g.ultimaFila = filaNum;
     g.estat = row;
+    g.files.push(filaNum);
     g.totalHores += parseHores_(row[ROSTER_IDX.HORES]);
     if (teExempcio_(row[ROSTER_IDX.EXEMPCIO])) g.exempcio = row[ROSTER_IDX.EXEMPCIO];
   }
@@ -1040,7 +1070,7 @@ function agruparAlumnesRoster_(files, primeraFilaNum) {
       } else {
         grupActual = {
           primeraFila: filaNum, ultimaFila: filaNum, nom: row[ROSTER_IDX.NOM], mail: row[ROSTER_IDX.MAIL],
-          estat: row, totalHores: parseHores_(row[ROSTER_IDX.HORES]), exempcio: row[ROSTER_IDX.EXEMPCIO]
+          estat: row, files: [filaNum], totalHores: parseHores_(row[ROSTER_IDX.HORES]), exempcio: row[ROSTER_IDX.EXEMPCIO]
         };
         indexPerNom[clau] = grups.length;
         grups.push(grupActual);
@@ -1145,6 +1175,7 @@ function obtenirDashboardRoster_(ss) {
     return {
       primeraFila: g.primeraFila,
       ultimaFila: g.ultimaFila,
+      filesConveni: g.files,
       nom: g.nom,
       mail: g.mail,
       empresa: row[6],
@@ -1243,6 +1274,8 @@ function executarAccio_(accio, payload, ss) {
     case 'updateCells': return actualitzarCellesRoster_(ss, payload);
     case 'insertRow': return inserirFilaRoster_(ss, payload);
     case 'crearConveni': return crearConveniRoster_(ss, payload);
+    case 'getConveniComplet': return obtenirConveniComplet_(ss, payload);
+    case 'deleteConveni': return eliminarConveniRoster_(ss, payload);
     case 'getPlantilles': return obtenirPlantillesApi_(ss);
     case 'updatePlantilla': return actualitzarPlantilla_(ss, payload);
     case 'getStudents': return obtenirAlumnes_(ss);

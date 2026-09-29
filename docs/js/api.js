@@ -8,7 +8,7 @@ class ApiError extends Error {
 const Api = (function () {
   // Accions de només lectura: es poden reintentar automàticament si falla
   // per xarxa/timeout, perquè repetir-les no té cap efecte secundari.
-  const ACCIONS_LECTURA = ['ping', 'getDashboard', 'getSheetData', 'getPlantilles', 'getStudents', 'getProgramats', 'getRegistre', 'previewCorreu'];
+  const ACCIONS_LECTURA = ['ping', 'getDashboard', 'getSheetData', 'getPlantilles', 'getStudents', 'getProgramats', 'getRegistre', 'previewCorreu', 'getConveniComplet'];
   const TIMEOUT_MS = 20000;
 
   // IMPORTANT: cal Content-Type: text/plain per evitar que el navegador faci un
