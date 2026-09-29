@@ -887,6 +887,26 @@ function extreureOpcionsValidacio_(regla) {
   }
 }
 
+// Retorna, per a cada columna de ROSTER_COLUMNS, el seu tipus i (si és
+// 'select') les opcions reals — les de la Validació de dades del Sheet si
+// n'hi ha (llegides amb una sola crida getDataValidations() sobre la fila
+// mostra, en lloc d'una crida getDataValidation() per columna), o si no les
+// fixades al codi. Es fa servir tant per a la graella d'"Excel oficial" com
+// per a la pestanya "Tot" del panell ràpid del Dashboard.
+function obtenirTipusColumnesRoster_(hoja) {
+  const last = hoja.getLastRow();
+  const numCols = ROSTER_COLUMNS.length;
+  const validacionsFilaMostra = last >= 3
+    ? hoja.getRange(3, 1, 1, numCols).getDataValidations()[0]
+    : null;
+
+  return ROSTER_COLUMNS.map(function (c, idx) {
+    if (c.tipus !== 'select') return { tipus: c.tipus, opcions: null };
+    const opcionsSheet = validacionsFilaMostra ? extreureOpcionsValidacio_(validacionsFilaMostra[idx]) : null;
+    return { tipus: 'select', opcions: opcionsSheet || c.opcions || null };
+  });
+}
+
 function obtenirDadesRoster_(ss) {
   const hoja = obtenirFullRoster_(ss);
   const last = hoja.getLastRow();
@@ -905,18 +925,7 @@ function obtenirDadesRoster_(ss) {
     });
   }
 
-  // Una sola crida (getDataValidations, en plural) llegeix TOTA la fila
-  // mostra d'un cop, en lloc d'una crida getDataValidation() per columna
-  // (~20 columnes 'select' = ~20 crides innecessàries, notablement més lent).
-  const validacionsFilaMostra = last >= 3
-    ? hoja.getRange(3, 1, 1, numCols).getDataValidations()[0]
-    : null;
-
-  const columnTypes = ROSTER_COLUMNS.map(function (c, idx) {
-    if (c.tipus !== 'select') return { tipus: c.tipus, opcions: null };
-    const opcionsSheet = validacionsFilaMostra ? extreureOpcionsValidacio_(validacionsFilaMostra[idx]) : null;
-    return { tipus: 'select', opcions: opcionsSheet || c.opcions || null };
-  });
+  const columnTypes = obtenirTipusColumnesRoster_(hoja);
 
   return { headers: headers, rows: rows, columnTypes: columnTypes };
 }
@@ -1004,19 +1013,21 @@ function crearConveniRoster_(ss, payload) {
 }
 
 // Retorna tots els valors d'UNA fila concreta de "Excel oficial", en l'ordre
-// de ROSTER_COLUMNS i ja formatats per mostrar (les dates com a dd/MM/yyyy,
-// la resta tal qual) — es fa servir des de la pestanya "Tot" del panell
-// ràpid del Dashboard per veure un conveni concret sense haver d'anar a la
-// graella sencera.
+// de ROSTER_COLUMNS, junt amb el tipus/opcions de cada columna (igual que
+// getSheetData) — es fa servir des de la pestanya "Tot" del panell ràpid
+// del Dashboard per veure I EDITAR un conveni concret sense haver d'anar a
+// la graella sencera. Els valors es tornen tal qual els dona getValues()
+// (les dates com a Date, no com a text ja formatat), perquè la web els
+// pugui precarregar directament als mateixos controls (select/date/text)
+// que ja fa servir "Excel oficial".
 function obtenirConveniComplet_(ss, payload) {
   const hoja = obtenirFullRoster_(ss);
   const row = Number(payload.row);
   if (!row || row < 3 || row > hoja.getLastRow()) { const e = new Error('Fila no vàlida'); e.code = 'BAD_REQUEST'; throw e; }
   const valors = hoja.getRange(row, 1, 1, ROSTER_COLUMNS.length).getValues()[0];
+  const columnTypes = obtenirTipusColumnesRoster_(hoja);
   const camps = ROSTER_COLUMNS.map(function (col, idx) {
-    let valor = valors[idx];
-    if (valor instanceof Date) valor = Utilities.formatDate(valor, Session.getScriptTimeZone(), 'dd/MM/yyyy');
-    return { header: col.header, valor: (valor === '' || valor === null || valor === undefined) ? '' : String(valor) };
+    return { header: col.header, valor: valors[idx], tipus: columnTypes[idx].tipus, opcions: columnTypes[idx].opcions };
   });
   return { row: row, camps: camps };
 }

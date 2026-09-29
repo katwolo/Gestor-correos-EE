@@ -186,6 +186,9 @@ const Dashboard = (function () {
     const filaBtn = ev.target.closest('.tot-fila-btn');
     if (filaBtn) { seleccionarFilaTot_(Number(filaBtn.dataset.fila)); return; }
 
+    const guardarTotBtn = ev.target.closest('.tot-guardar-btn');
+    if (guardarTotBtn) { guardarTot(guardarTotBtn); return; }
+
     const eliminarBtn = ev.target.closest('.tot-eliminar-btn');
     if (eliminarBtn) { eliminarConveni(eliminarBtn); return; }
 
@@ -431,9 +434,10 @@ const Dashboard = (function () {
   }
 
   // Pestanya "Tot": permet triar quin conveni de l'alumne es vol veure (1 =
-  // el més antic, el número més alt = el conveni actual) i en mostra totes
-  // les columnes tal com estan a "Excel oficial", amb un botó per eliminar
-  // sencera aquesta fila al final.
+  // el més antic, el número més alt = el conveni actual) i en mostra TOTS
+  // els camps editables (select/data/text, igual que la graella d'"Excel
+  // oficial"), amb "Guardar" i, al final, un botó per eliminar sencera
+  // aquesta fila.
   function renderTotForm(a) {
     const files = (a.filesConveni && a.filesConveni.length) ? a.filesConveni : [a.ultimaFila];
     const botonsFila = files.map(function (fila, idx) {
@@ -445,16 +449,63 @@ const Dashboard = (function () {
     if (totCarregant) {
       contingutHtml = '<p class="hint-text">Carregant…</p>';
     } else if (totDades) {
-      contingutHtml = '<div class="tot-camps">' + totDades.camps.map(function (c) {
-        return '<div class="tot-camp"><span class="tot-camp-label">' + Util.escapeHtml(c.header) + '</span>' +
-          '<span class="tot-camp-valor">' + Util.escapeHtml(c.valor || '—') + '</span></div>';
-      }).join('') + '</div>' +
+      const campsHtml = totDades.camps.map(function (c, idx) {
+        return '<div class="form-row"><label>' + Util.escapeHtml(c.header) + '</label>' + renderTotCampInput_(c, idx + 1) + '</div>';
+      }).join('');
+      contingutHtml = campsHtml +
+        '<button type="button" class="btn-primary tot-guardar-btn">Guardar</button>' +
         '<button type="button" class="btn-danger tot-eliminar-btn">🗑️ Eliminar aquesta fila</button>';
     } else {
       contingutHtml = '<p class="hint-text">Selecciona un conveni per veure\'n les dades.</p>';
     }
 
     return '<div class="tot-selector"><span class="hint-text">Conveni:</span>' + botonsFila + '</div>' + contingutHtml;
+  }
+
+  // Un control per camp segons el seu tipus (select/data/text), amb el
+  // mateix criteri que la graella d'"Excel oficial": select amb les opcions
+  // reals del Sheet (o les per defecte si no en té), data amb <input date>
+  // i la resta com a text lliure.
+  function renderTotCampInput_(camp, col) {
+    const valor = camp.valor === null || camp.valor === undefined ? '' : camp.valor;
+    if (camp.tipus === 'select') {
+      const opcions = camp.opcions || [];
+      const optionsHtml = ['<option value=""></option>'].concat(opcions.map(function (opt) {
+        return '<option value="' + Util.escapeHtml(opt) + '"' + (opt === valor ? ' selected' : '') + '>' + Util.escapeHtml(opt) + '</option>';
+      })).join('');
+      return '<select class="tot-camp-input" data-col="' + col + '">' + optionsHtml + '</select>';
+    }
+    if (camp.tipus === 'data') {
+      const dateVal = valor ? String(valor).slice(0, 10) : '';
+      return '<input type="date" class="tot-camp-input" data-col="' + col + '" value="' + dateVal + '">';
+    }
+    return '<input type="text" class="tot-camp-input" data-col="' + col + '" value="' + Util.escapeHtml(String(valor)) + '">';
+  }
+
+  async function guardarTot(btn) {
+    const row = totFilaSeleccionada;
+    if (!row) return;
+    const card = btn.closest('.student-card');
+    const cells = {};
+    card.querySelectorAll('.tot-camp-input').forEach(function (el) {
+      cells[el.dataset.col] = el.value;
+    });
+    const sheetId = State.getSheetIdOficial();
+
+    btn.disabled = true;
+    btn.textContent = 'Desant…';
+    try {
+      const data = await Api.call('updateCells', { sheetId: sheetId, row: row, cells: cells });
+      aplicarDashboardData_(data);
+      renderTiles(document.getElementById('dashboard-tiles'), data.tiles);
+      Util.showToast('Conveni desat.');
+      await seleccionarFilaTot_(row);
+    } catch (err) {
+      Util.showToast('No s\'ha pogut desar: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar';
+    }
   }
 
   async function crearConveni(btn) {

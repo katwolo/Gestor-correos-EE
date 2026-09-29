@@ -256,17 +256,7 @@ html, body {
 }
 .tot-fila-btn.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
 
-.tot-camps { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-.tot-camp {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 0.85rem;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 6px;
-}
-.tot-camp-label { color: var(--text-muted); }
-.tot-camp-valor { font-weight: 600; text-align: right; }
+.tot-guardar-btn { margin-right: 10px; margin-bottom: 10px; }
 
 .btn-danger {
   background: var(--danger);
