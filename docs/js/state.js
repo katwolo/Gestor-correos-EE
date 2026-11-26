@@ -22,6 +22,18 @@ const State = (function () {
     emit('sheetIdOficial', id);
   }
 
+  // Contrasenya de la web: es desa en aquest dispositiu sense caducitat, i
+  // només es torna a demanar si el servidor diu que falta o és incorrecta.
+  function getPassword() {
+    try { return localStorage.getItem('eePassword') || ''; } catch (err) { return ''; }
+  }
+  function setPassword(pw) {
+    try {
+      if (pw) localStorage.setItem('eePassword', pw);
+      else localStorage.removeItem('eePassword');
+    } catch (err) { /* navegador sense localStorage: es tornarà a demanar */ }
+  }
+
   function getSheetIdCorreus() { return data.sheetIdCorreus; }
 
   function setSheetIdCorreus(id) {
@@ -34,6 +46,7 @@ const State = (function () {
   return {
     on: on, emit: emit,
     getSheetIdOficial: getSheetIdOficial, setSheetIdOficial: setSheetIdOficial,
-    getSheetIdCorreus: getSheetIdCorreus, setSheetIdCorreus: setSheetIdCorreus
+    getSheetIdCorreus: getSheetIdCorreus, setSheetIdCorreus: setSheetIdCorreus,
+    getPassword: getPassword, setPassword: setPassword
   };
 })();

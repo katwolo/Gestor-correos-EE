@@ -876,3 +876,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .programat-row.data-table-head > :nth-child(2) { display: none; }
   .programat-cell-end { flex-direction: column; align-items: flex-end; }
 }
+
+/* ---- Diàleg de contrasenya ---- */
+
+.modal-top { z-index: 60; }
+.modal-card > .hint-text { margin-bottom: 14px; }
+.password-row { margin-top: 4px; }
+.form-error {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }

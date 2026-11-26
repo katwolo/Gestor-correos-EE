@@ -210,6 +210,6 @@ Igual que a "Excel oficial", si enganxes l'enllaç d'un Sheet completament nou i
 
 ## Autenticació
 
-La web **no té cap login ni contrasenya**: s'entra directament al Dashboard. Hi va haver una contrasenya compartida simple en versions anteriors, però es va treure perquè donava més problemes que protecció real (sessions que quedaven amb una contrasenya caducada entre dispositius, per exemple).
+La web no té pantalla de login: s'entra directament al Dashboard. Però el servidor demana una **contrasenya** (`APP_PASSWORD`) a cada petició. La primera vegada que s'obre la web en un dispositiu surt un diàleg per escriure-la; es desa en aquell navegador sense caducitat i no es torna a demanar, tret que es canviï al servidor. També es pot canviar o esborrar des del diàleg de **Configuració** (⚙️).
 
-Això no vol dir que qualsevol amb l'enllaç de GitHub Pages vegi les dades: sense haver enganxat abans un `sheetId` en aquell navegador concret, totes les seccions es veuen buides. Però la URL del backend (`/exec`, a `docs/js/config.js`) és pública (visible al codi font), així que qui arribi a tenir eixa URL **i** l'ID d'un dels dos Sheets podria consultar l'API directament, sense passar per la web. Vegeu la nota de seguretat completa a `DEPLOY.md` abans de compartir l'enllaç.
+A més, el servidor pot limitar-se als Sheets autoritzats (`ALLOWED_SHEET_IDS`). Vegeu la nota de seguretat completa a `DEPLOY.md`.

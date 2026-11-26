@@ -113,11 +113,38 @@
       <p id="correus-sheet-link-status" class="hint-text"></p>
     </div>
 
+    <form id="password-change-form" class="sheet-link-box">
+      <label for="password-change-input">Contrasenya de la web</label>
+      <div class="sheet-link-row">
+        <input id="password-change-input" type="password" autocomplete="current-password" placeholder="Escriu-la per canviar la desada">
+        <button type="submit" class="btn-primary">Desa</button>
+      </div>
+      <p id="password-change-status" class="hint-text">Es desa només en aquest dispositiu i no caduca.</p>
+    </form>
+
     <div class="modal-danger-zone">
-      <button id="reset-web-btn" class="btn-link btn-danger-link">🗑️ Reiniciar la web (esborra els enllaços)</button>
-      <p class="hint-text">Només neteja aquest navegador (els dos enllaços desats i el que es mostra). No toca res dels teus Google Sheets reals.</p>
+      <button id="reset-web-btn" class="btn-link btn-danger-link">🗑️ Reiniciar la web (esborra els enllaços i la contrasenya)</button>
+      <p class="hint-text">Només neteja aquest navegador (els dos enllaços i la contrasenya desats, i el que es mostra). No toca res dels teus Google Sheets reals.</p>
     </div>
   </div>
+</div>
+
+<div id="password-modal" class="modal-overlay modal-top hidden">
+  <form id="password-form" class="modal-card">
+    <div class="modal-header">
+      <h2>🔒 Contrasenya</h2>
+    </div>
+    <p class="hint-text">Escriu la contrasenya de la web. Es desarà en aquest dispositiu i no te la tornarem a demanar.</p>
+    <p id="password-error" class="form-error hidden">La contrasenya no és correcta. Torna-ho a provar.</p>
+    <div class="form-row password-row">
+      <label for="password-input">Contrasenya</label>
+      <input id="password-input" type="password" autocomplete="current-password">
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="password-cancel" class="btn-secondary">Cancel·la</button>
+      <button type="submit" class="btn-primary">Entra</button>
+    </div>
+  </form>
 </div>
 
 <div id="toast" class="toast hidden"></div>
@@ -125,6 +152,7 @@
 <script src="js/config.js"></script>
 <script src="js/util.js"></script>
 <script src="js/state.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/api.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/excel.js"></script>
