@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gestor EE</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -11,20 +12,31 @@
 <div id="app-shell" class="app-shell">
 
   <header class="app-header">
-    <span class="app-title">Gestor EE</span>
-    <span class="user-email"></span>
-    <button id="settings-btn" class="icon-btn header-icon-btn" title="Configuració dels Sheets">⚙️</button>
+    <button id="menu-btn" class="icon-btn menu-btn" title="Obre el menú" aria-label="Obre el menú" aria-controls="app-nav" aria-expanded="false">
+      <svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 4h14M2 9h14M2 14h14"/></svg>
+    </button>
+    <h1 id="app-section-title" class="app-section-title">Dashboard</h1>
+    <button id="settings-btn" class="btn-secondary btn-sm" title="Configuració dels Sheets">⚙️ <span class="hide-xs">Sheets</span></button>
   </header>
 
-  <nav class="app-nav">
-    <button class="nav-btn active" data-section="dashboard">
+  <div id="nav-scrim" class="nav-scrim"></div>
+  <nav id="app-nav" class="app-nav" aria-label="Seccions">
+    <div class="nav-brand">
+      <span class="nav-brand-title">📋 Gestor EE</span>
+      <span class="nav-brand-sub">Estada a l'empresa · FP</span>
+    </div>
+    <button class="nav-btn active" data-section="dashboard" data-title="Dashboard">
       <span class="nav-icon">🏠</span><span>Dashboard</span>
     </button>
-    <button class="nav-btn" data-section="excel">
+    <button class="nav-btn" data-section="excel" data-title="Excel oficial">
       <span class="nav-icon">📊</span><span>Excel oficial</span>
     </button>
-    <button class="nav-btn" data-section="correus">
+    <button class="nav-btn" data-section="correus" data-title="Enviar correus">
       <span class="nav-icon">✉️</span><span>Enviar correus</span>
+    </button>
+    <div class="nav-sep"></div>
+    <button id="nav-settings-btn" class="nav-btn">
+      <span class="nav-icon">⚙️</span><span>Configuració</span>
     </button>
   </nav>
 
@@ -36,7 +48,7 @@
       </div>
       <div id="dashboard-tiles" class="tiles-grid"></div>
       <div class="dashboard-students-header">
-        <h2>Alumnat</h2>
+        <h2 class="section-label">Alumnat</h2>
         <input id="dashboard-cerca-alumne" type="text" class="wizard-search hidden" placeholder="🔎 Cerca alumne/a per nom...">
       </div>
       <div id="dashboard-students" class="student-list"></div>
@@ -66,8 +78,8 @@
       </div>
 
       <div id="correus-toolbar" class="correus-toolbar hidden">
-        <button id="correus-inici-btn" class="btn-link">🏠 Inici</button>
-        <button id="correus-programats-btn" class="btn-link">📅 Veure correus programats</button>
+        <button id="correus-inici-btn" class="btn-secondary btn-sm">🏠 Inici</button>
+        <button id="correus-programats-btn" class="btn-secondary btn-sm">📅 Veure correus programats</button>
       </div>
 
       <div id="correus-wizard" class="hidden"></div>

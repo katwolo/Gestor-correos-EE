@@ -137,8 +137,8 @@ const Dashboard = (function () {
       const clicable = !!TILE_FILTERS[key];
       const activa = filtreActiu === key;
       return '<div class="tile' + (clicable ? ' tile-clickable' : '') + (activa ? ' tile-active' : '') +
-        '" data-tile="' + key + '"><div class="tile-value">' + tileData[key] +
-        '</div><div class="tile-label">' + Util.escapeHtml(label) + '</div></div>';
+        '" data-tile="' + key + '"><div class="tile-label">' + Util.escapeHtml(label) +
+        '</div><div class="tile-value">' + tileData[key] + '</div></div>';
     }).join('');
 
     container.querySelectorAll('.tile-clickable').forEach(function (el) {
@@ -275,7 +275,7 @@ const Dashboard = (function () {
     if (!llista.length) {
       container.innerHTML = capçalera + '<p class="hint-text">Cap alumne coincideix amb aquest filtre.</p>';
     } else {
-      container.innerHTML = capçalera + llista.map(renderStudentCard).join('');
+      container.innerHTML = capçalera + '<div class="student-table">' + llista.map(renderStudentCard).join('') + '</div>';
     }
   }
 
@@ -285,14 +285,29 @@ const Dashboard = (function () {
     const isExpanded = expandedRow === a.ultimaFila;
     return '<div class="student-card' + (isExpanded ? ' student-card-expanded' : '') + '" data-row="' + a.ultimaFila + '">' +
       '<div class="student-card-header">' +
+      '<div class="student-card-top">' +
+      '<div class="student-card-id">' +
       '<div class="student-name">' + Util.escapeHtml(a.nom) + '</div>' +
       '<div class="student-fase">' + Util.escapeHtml(a.empresa || 'Sense empresa assignada') + '</div>' +
+      '</div>' +
+      renderEstatPill(a) +
+      '</div>' +
       renderHoresBar(a) +
       renderFaseBar(a) +
       renderObservacionsLine(a) +
       '</div>' +
       (isExpanded ? renderEditPanel(a) : '') +
       '</div>';
+  }
+
+  // Pastilla d'estat a la dreta del nom: el que cal mirar d'un cop d'ull
+  // (falta documentació passa per davant d'"Actiu").
+  function renderEstatPill(a) {
+    let cls = 'pill-muted', txt = ESTAT_LABELS.inactiu;
+    if (a.finalitzat) { cls = 'pill-success'; txt = ESTAT_LABELS.finalitzat; }
+    else if (a.actiu && a.faltaDocument) { cls = 'pill-warn'; txt = 'Falta doc.'; }
+    else if (a.actiu) { cls = 'pill-primary'; txt = ESTAT_LABELS.actiu; }
+    return '<span class="pill ' + cls + '">' + Util.escapeHtml(txt) + '</span>';
   }
 
   function renderProgressBar(percent, colorClass, label) {
@@ -348,19 +363,21 @@ const Dashboard = (function () {
   // documentació" pel contingut real d'Observacions (truncat amb un "+" per
   // ampliar si és llarg). Si l'alumne no té cap observació anotada, no es
   // mostra res en el seu lloc.
+  // L'estat ja es veu a la pastilla de dalt, aquí només van observacions i
+  // exempció; si no n'hi ha cap, la línia no apareix.
   function renderObservacionsLine(a) {
-    const estatKey = a.finalitzat ? 'finalitzat' : (a.actiu ? 'actiu' : 'inactiu');
     const obs = (a.observacions || '').trim();
     let obsHtml = '';
     if (obs) {
       const expandit = obsExpandedRows.has(a.ultimaFila);
       const esLlarg = obs.length > OBSERVACIONS_LIMIT;
       const text = expandit || !esLlarg ? obs : obs.slice(0, OBSERVACIONS_LIMIT) + '…';
-      obsHtml = ' · ' + Util.escapeHtml(text) +
+      obsHtml = Util.escapeHtml(text) +
         (esLlarg ? ' <button type="button" class="btn-link observacions-toggle">' + (expandit ? '−' : '+') + '</button>' : '');
     }
-    return '<div class="hint-text">' + Util.escapeHtml(ESTAT_LABELS[estatKey]) + obsHtml +
-      (a.teExempcio ? ' · <strong>Exempció: ' + Util.escapeHtml(a.exempcio) + '</strong>' : '') + '</div>';
+    const exempcioHtml = a.teExempcio ? '<span class="pill pill-exempt">Exempció: ' + Util.escapeHtml(a.exempcio) + '</span>' : '';
+    if (!obsHtml && !exempcioHtml) return '';
+    return '<div class="student-obs">' + exempcioHtml + (obsHtml ? '<span>' + obsHtml + '</span>' : '') + '</div>';
   }
 
   function acordOptionsHtml(acordActual) {
