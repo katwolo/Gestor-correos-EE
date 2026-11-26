@@ -18,8 +18,9 @@ const App = (function () {
     });
     document.getElementById('reset-web-btn').addEventListener('click', resetWeb);
 
-    // Sense contrasenya: la web ja no té pantalla de login, s'entra
-    // directament al Dashboard.
+    // No hi ha pantalla de login: s'entra directament al Dashboard i, si el
+    // servidor demana la contrasenya, Api obre el diàleg (Auth) en aquell moment.
+    Auth.init();
     Dashboard.init();
     Excel.init();
     Correus.init();
@@ -42,11 +43,12 @@ const App = (function () {
   // Neteja només el navegador (els dos sheetId desats i tot el que es
   // mostra): no toca res dels Google Sheets reals.
   function resetWeb() {
-    const ok = confirm('Segur que vols reiniciar la web? S\'esborraran els dos enllaços desats en aquest navegador i deixaràs de veure les dades carregades. Els teus Google Sheets no es toquen.');
+    const ok = confirm('Segur que vols reiniciar la web? S\'esborraran els dos enllaços i la contrasenya desats en aquest navegador i deixaràs de veure les dades carregades. Els teus Google Sheets no es toquen.');
     if (!ok) return;
 
     State.setSheetIdOficial(null);
     State.setSheetIdCorreus(null);
+    State.setPassword(null);
 
     document.getElementById('sheet-link-input').value = '';
     document.getElementById('sheet-link-status').textContent = '';
@@ -55,7 +57,7 @@ const App = (function () {
 
     Dashboard.load();
     closeSettingsModal();
-    Util.showToast('Web reiniciada: enllaços esborrats.');
+    Util.showToast('Web reiniciada: enllaços i contrasenya esborrats.');
   }
 
   function showSection(name) {

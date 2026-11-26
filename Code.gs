@@ -60,7 +60,7 @@ function onOpen() {
     ui.alert(
       'Benvingut/da!',
       'Abans de començar, et recomanem llegir el tutorial que trobaràs al menú "Enviaments".\n\n' +
-      'Si tens qualsevol dubte, pots escriure a ibustos@ieb.cat.\n\n' +
+      contacteText_('Si tens qualsevol dubte, pots escriure a ', '.\n\n') +
       'Espero que us sigui útil aquesta eina!',
       ui.ButtonSet.OK
     );
@@ -74,6 +74,14 @@ function onOpen() {
   }
 }
 
+// Correu de contacte que es mostra als missatges del menú del Sheet. Es llegeix
+// de la Script Property CONTACT_EMAIL (en lloc d'estar escrit al codi, que és
+// públic al repositori); si no s'ha configurat, el text de contacte no surt.
+function contacteText_(abans, despres) {
+  const correu = PropertiesService.getScriptProperties().getProperty('CONTACT_EMAIL');
+  return correu ? abans + correu + despres : '';
+}
+
 function mostrarTutorial() {
   SpreadsheetApp.getUi().alert(
     'Tutorial ràpid',
@@ -82,7 +90,7 @@ function mostrarTutorial() {
     'Full "Plantilles": defineix el cos de cada correu amb els marcadors {{nombreAlumno}}, {{correoAlumno}}, ' +
     '{{nombreTutor}}, {{correoTutor}} i {{anyAcademic}}.\n\n' +
     "Cada dia a les 8:00 s'envien automàticament els correus marcats. També pots fer-ho ara des del menú " +
-    '"Enviaments > Enviar ara".\n\nDubtes: ibustos@ieb.cat',
+    '"Enviaments > Enviar ara".' + contacteText_('\n\nDubtes: ', ''),
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
@@ -1230,6 +1238,64 @@ function doGet() {
   return ContentService.createTextOutput('Gestor EE API — utilitza POST.').setMimeType(ContentService.MimeType.TEXT);
 }
 
+// ==== SEGURETAT DE L'API ====
+//
+// La web app és pública (ANYONE_ANONYMOUS) i s'executa amb els permisos del
+// compte que la desplega (USER_DEPLOYING). Sense cap control, qualsevol que
+// conegués la URL /exec podria llegir/escriure qualsevol Sheet al qual aquest
+// compte tingui accés (també un Sheet creat per ell mateix i compartit amb
+// aquest compte) i fer enviar correus des d'aquest compte. Per això:
+//
+// 1. APP_PASSWORD (obligatòria): totes les accions excepte "ping" han de
+//    portar la contrasenya correcta. Si la propietat no existeix, l'API es
+//    nega a fer res (millor parar que quedar oberta per descuit).
+// 2. ALLOWED_SHEET_IDS (opcional, però recomanada): llista d'IDs de Sheets
+//    separats per comes. Si està definida, qualsevol altre sheetId es rebutja,
+//    encara que la contrasenya sigui correcta.
+function comprovarAcces_(body) {
+  const props = PropertiesService.getScriptProperties();
+  const esperada = props.getProperty('APP_PASSWORD');
+  if (!esperada) {
+    const e = new Error("L'API no està configurada: falta la Script Property APP_PASSWORD (vegeu DEPLOY.md).");
+    e.code = 'SERVER_NOT_CONFIGURED';
+    throw e;
+  }
+
+  const rebuda = typeof body.password === 'string' ? body.password : '';
+  if (!rebuda) {
+    const e = new Error('Cal la contrasenya de la web.');
+    e.code = 'AUTH_REQUIRED';
+    throw e;
+  }
+  if (!contrasenyesIguals_(rebuda, esperada)) {
+    // Una petita espera per fer més lent provar contrasenyes a cegues.
+    Utilities.sleep(1500);
+    const e = new Error('Contrasenya incorrecta.');
+    e.code = 'WRONG_PASSWORD';
+    throw e;
+  }
+
+  const sheetId = body.payload && body.payload.sheetId;
+  const permesos = String(props.getProperty('ALLOWED_SHEET_IDS') || '')
+    .split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+  if (sheetId && permesos.length && permesos.indexOf(String(sheetId).trim()) === -1) {
+    const e = new Error("Aquest Google Sheets no està autoritzat al servidor (afegeix-ne l'ID a ALLOWED_SHEET_IDS).");
+    e.code = 'SHEET_NOT_ALLOWED';
+    throw e;
+  }
+}
+
+// Comparació que no s'atura al primer caràcter diferent, perquè el temps de
+// resposta no doni pistes de quants caràcters coincideixen.
+function contrasenyesIguals_(a, b) {
+  let diff = a.length ^ b.length;
+  const n = Math.max(a.length, b.length);
+  for (let i = 0; i < n; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
 function doPost(e) {
   let body;
   try {
@@ -1245,6 +1311,8 @@ function doPost(e) {
     if (accio === 'ping') {
       return jsonResponse_({ ok: true, data: { time: new Date().toISOString(), version: '1.0' } });
     }
+
+    comprovarAcces_(body);
 
     const ss = payload.sheetId ? SpreadsheetApp.openById(payload.sheetId) : null;
 

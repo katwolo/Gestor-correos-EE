@@ -192,6 +192,9 @@ const Dashboard = (function () {
     const eliminarBtn = ev.target.closest('.tot-eliminar-btn');
     if (eliminarBtn) { eliminarConveni(eliminarBtn); return; }
 
+    const recordatoriBtn = ev.target.closest('.recordatori-btn');
+    if (recordatoriBtn) { enviarRecordatori(Number(recordatoriBtn.closest('.student-card').dataset.row)); return; }
+
     const crearBtn = ev.target.closest('.crear-conveni-btn');
     if (crearBtn) { crearConveni(crearBtn); return; }
 
@@ -397,8 +400,49 @@ const Dashboard = (function () {
   // Panell d'edició ràpida amb tres pestanyes: "Crear conveni" (nova fila
   // per a un conveni addicional), "Seguiment" (editar el conveni actual) i
   // "Tot" (veure/eliminar qualsevol conveni sencer de l'alumne).
+  // Motius pels quals cal escriure a aquest alumne/a, de més a menys urgent.
+  // Cada motiu el tradueix Correus a una plantilla concreta (per paraules
+  // clau del nom de la plantilla). El primer que trobi plantilla, guanya.
+  function motiusRecordatori(a) {
+    const motius = [];
+    const avui = new Date().toISOString().slice(0, 10);
+    if (a.finalitzat) {
+      motius.push({ clau: 'valoracio', text: 'les pràctiques ja estan finalitzades' });
+      return motius;
+    }
+    if (!a.actiu) {
+      motius.push({ clau: 'inici', text: 'encara no ha començat les pràctiques' });
+      return motius;
+    }
+    if (a.faseConveniIndex < a.faseConveniTotal - 1) {
+      motius.push({ clau: 'acord', text: "l'acord (ref05/06) encara no està signat per tothom" });
+    }
+    if (a.dataFinal && a.dataFinal < avui) {
+      motius.push({ clau: 'valoracio', text: 'la data final del conveni ja ha passat' });
+    }
+    if (a.horesPendents > 0) {
+      motius.push({ clau: 'hores', text: 'falten ' + (Math.round(a.horesPendents * 10) / 10) + 'h per completar el quadern' });
+    }
+    motius.push({ clau: 'seguiment', text: 'està fent pràctiques' });
+    return motius;
+  }
+
+  function enviarRecordatori(row) {
+    const a = alumnesActuals.find(function (x) { return x.ultimaFila === row; });
+    if (!a) return;
+    if (!State.getSheetIdCorreus()) {
+      Util.showToast("Primer enganxa l'enllaç del Sheet d'\"Enviar correus\" a Configuració (⚙️).", 'error');
+      return;
+    }
+    Correus.prepararDesDeDashboard({ nom: a.nom, mail: a.mail, motius: motiusRecordatori(a) });
+    App.showSection('correus');
+  }
+
   function renderEditPanel(a) {
     return '<div class="student-edit-panel">' +
+      '<div class="student-actions">' +
+      '<button type="button" class="btn-secondary btn-sm recordatori-btn">✉️ Enviar recordatori</button>' +
+      '</div>' +
       '<div class="panel-tabs">' +
       '<button type="button" class="panel-tab-btn' + (panelTab === 'crear' ? ' active' : '') + '" data-tab="crear">Crear conveni</button>' +
       '<button type="button" class="panel-tab-btn' + (panelTab === 'seguiment' ? ' active' : '') + '" data-tab="seguiment">Seguiment</button>' +

@@ -15,7 +15,22 @@ const Api = (function () {
   // preflight OPTIONS que Apps Script no pot respondre (trencaria totes les crides).
   // `payload` ha d'incloure explícitament `sheetId` (Dashboard/Excel oficial i
   // Enviar correus fan servir Sheets diferents, no hi ha cap valor per defecte).
+  // Si el servidor contesta que falta la contrasenya o que és incorrecta, es
+  // demana a l'usuari (un sol diàleg encara que hi hagi diverses crides en
+  // curs) i es repeteix la crida. Si l'usuari cancel·la, es propaga l'error.
   async function call(action, payload) {
+    for (;;) {
+      try {
+        return await callAmbReintents_(action, payload);
+      } catch (err) {
+        if (err.code !== 'AUTH_REQUIRED' && err.code !== 'WRONG_PASSWORD') throw err;
+        const novaContrasenya = await Auth.demanar(err.code === 'WRONG_PASSWORD');
+        if (!novaContrasenya) throw err;
+      }
+    }
+  }
+
+  async function callAmbReintents_(action, payload) {
     const esLectura = ACCIONS_LECTURA.indexOf(action) !== -1;
     const maxIntents = esLectura ? 2 : 1;
 
@@ -36,7 +51,7 @@ const Api = (function () {
   }
 
   async function ferCrida_(action, payload) {
-    const body = { action: action, payload: payload || {} };
+    const body = { action: action, payload: payload || {}, password: State.getPassword() };
     const controller = new AbortController();
     const timeoutId = setTimeout(function () { controller.abort(); }, TIMEOUT_MS);
 

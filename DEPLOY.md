@@ -5,7 +5,7 @@ Aquest projecte té dues meitats:
 - **Backend**: `Code.gs` + `appsscript.json`, que s'han d'enganxar manualment a un projecte d'Apps Script. No es pot desplegar automàticament des d'aquí — són passos que has de fer tu a la interfície de Google.
 - **Frontend**: la carpeta `docs/`, pensada per servir-se com a lloc estàtic amb GitHub Pages.
 
-La web **no té cap login ni contrasenya**: s'entra directament al Dashboard. Vegeu la nota de seguretat al final d'aquest document — és important entendre què implica abans de compartir l'enllaç.
+La web no té pantalla de login, però el servidor demana una **contrasenya** (`APP_PASSWORD`), que cada dispositiu desa la primera vegada. Vegeu la nota de seguretat al final d'aquest document abans de desplegar.
 
 **Important**: el projecte fa servir **dos Google Sheets diferents**, cadascun amb la seva pròpia caixa d'enllaç a la web (es desen per separat al navegador). Totes dues caixes viuen dins d'un mateix diàleg de "Configuració", que s'obre amb la icona ⚙️ de la capçalera.
 
@@ -34,7 +34,10 @@ A **Configuració del projecte → Propietats de l'script**, afegeix:
 | Propietat | Valor |
 |---|---|
 | `ENVIAMENT_SHEET_ID` | **Important**: l'ID del full d'"Enviar correus" (la part de l'URL entre `/d/` i `/edit`) — ha de ser exactament el mateix full que tens enganxat a la web. Sense això, el trigger diari fa servir el full al qual estigui lligat el projecte, que podria no coincidir |
+| `APP_PASSWORD` | **Obligatòria.** La contrasenya de la web (millor una frase llarga). Sense aquesta propietat l'API no respon a res. Vegeu "Nota sobre seguretat" |
+| `ALLOWED_SHEET_IDS` | **Recomanada.** Els IDs dels Sheets que pot fer servir la web, separats per comes (normalment dos: l'Excel oficial i el d'"Enviar correus"). Qualsevol altre Sheet es rebutja |
 | `TEACHER_NOTIFY_EMAIL` | (opcional) email on rebre l'avís si algun enviament de correu falla |
+| `CONTACT_EMAIL` | (opcional) correu de contacte que surt als missatges de benvinguda i del tutorial del menú del Sheet |
 
 ## 4. Executa la configuració inicial
 
@@ -58,6 +61,8 @@ A l'editor d'Apps Script: **Desplega → Nou desplegament**.
 Prem **Desplega** i autoritza si et torna a demanar. Copia la URL que acaba en `/exec` i enganxa-la a `docs/js/config.js` (`EXEC_URL`).
 
 > Quan editis `Code.gs` més endavant, fes servir **Gestionar desplegaments → Edita → Versió nova** perquè la URL `/exec` no canviï.
+>
+> **Ordre important quan actualitzis a la versió amb contrasenya:** primer afegeix `APP_PASSWORD` (i `ALLOWED_SHEET_IDS`) a les Script Properties, després enganxa el nou `Code.gs` i publica la versió nova. Si publiques el codi abans de crear la propietat, la web deixarà de funcionar fins que la creïs.
 
 ## 6. Activa GitHub Pages
 
@@ -88,10 +93,20 @@ L'any acadèmic de l'assumpte (`{{anyAcademic}}`) es calcula sol; no cal tocar-l
 
 ## Nota sobre seguretat
 
-La web **no té cap contrasenya ni login** — qui obri la URL de GitHub Pages entra directament al Dashboard. Això és una decisió deliberada (la contrasenya donava més problemes que protecció real: sessions que quedaven caducades entre dispositius, etc.), però és important entendre exactament quina protecció queda i quina no:
+La web no té pantalla de login, però **l'API demana una contrasenya** (`APP_PASSWORD`) a cada petició. La primera vegada que s'obre la web en un dispositiu, apareix un diàleg per escriure-la; es desa en aquell navegador **sense caducitat** i ja no es torna a demanar, tret que la canviïs al servidor (aleshores el diàleg torna a sortir, una sola vegada, amb l'avís "contrasenya incorrecta").
 
-- **La pantalla que es veu és inofensiva sense un Sheet enganxat**: sense haver desat abans un enllaç en aquell navegador concret, el Dashboard/Excel oficial/Enviar correus es veuen buits ("Encara no hi ha cap Google Sheets configurat").
-- **Però la URL del backend (`/exec`, dins de `docs/js/config.js`) és pública** — qualsevol pot veure-la simplement mirant el codi font de la pàgina. Si algú arriba a tenir eixa URL **i** l'ID del teu Google Sheet real, podria consultar l'API directament (amb `curl` o similar) i llegir totes les dades, sense passar per la web ni per cap login — l'app s'executa amb els permisos del compte que la va desplegar (`executeAs: USER_DEPLOYING`), no amb els de qui fa la petició.
-- **El risc real depèn, doncs, de si l'ID del Sheet es filtra alguna vegada** (un enllaç reenviat, una captura de pantalla, etc.). L'ID en si és una cadena llarga i aleatòria, no adivinable ni seqüencial — és un risc baix, comparable a compartir un Google Doc en mode "qualsevol persona amb l'enllaç", però no és zero.
+Per què cal: la web app s'executa amb els permisos del compte que la desplega (`executeAs: USER_DEPLOYING`) i la URL `/exec` és pública (és a `docs/js/config.js`). Sense contrasenya, qualsevol que tingués aquesta URL podria fer servir l'API sobre **qualsevol** Sheet al qual el compte tingui accés, també un Sheet creat per ell mateix i compartit amb el compte, i així **enviar correus des del compte del centre** amb el text que volgués. La contrasenya tanca aquest camí.
 
-Si en algun moment vols recuperar una capa de protecció, la solució anterior (contrasenya compartida via Script Property `APP_PASSWORD`, verificada a `doPost` abans de qualsevol acció) es pot tornar a afegir — demana-ho.
+Capes de protecció:
+
+| Capa | Què evita |
+|---|---|
+| `APP_PASSWORD` (obligatòria) | Que ningú sense la contrasenya llegeixi, escrigui o enviï res. Si la propietat no existeix, l'API es nega a funcionar (`SERVER_NOT_CONFIGURED`) |
+| `ALLOWED_SHEET_IDS` (recomanada) | Que, fins i tot amb la contrasenya, es pugui treballar sobre un Sheet que no sigui un dels teus |
+| Espera d'1,5 s en cada contrasenya incorrecta | Que es puguin provar contrasenyes a cegues ràpidament |
+
+Recomanacions:
+
+- Fes servir una **frase llarga** (p. ex. quatre paraules a l'atzar), no una paraula curta.
+- Si creus que la contrasenya s'ha filtrat, canvia `APP_PASSWORD` a les Script Properties: tots els dispositius la tornaran a demanar.
+- El botó "Reiniciar la web" del diàleg de Configuració esborra la contrasenya desada en aquell navegador (útil en un ordinador compartit).
