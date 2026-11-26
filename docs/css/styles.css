@@ -892,3 +892,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   font-weight: 500;
 }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
+/* ---- Botó "Enviar recordatori" i avís de l'assistent ---- */
+
+.student-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+
+.wizard-origen {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--primary-soft);
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+.wizard-origen-avis { background: var(--warn-soft); }

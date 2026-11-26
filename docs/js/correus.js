@@ -6,6 +6,9 @@ const Correus = (function () {
   let vistaProgramats = false;
   let programats = [];
   let programatEditant = null;
+  // Encàrrec que arriba del botó "Enviar recordatori" del Dashboard: s'aplica
+  // just després que acabin de carregar alumnes i plantilles.
+  let preseleccioPendent = null;
 
   const STEP_ORDER = ['alumne', 'tutor', 'plantilla', 'adjunts', 'confirmar'];
   const STEP_LABELS = { alumne: 'Alumne/a', tutor: 'Tutor/a', plantilla: 'Plantilles', adjunts: 'Adjunts', confirmar: 'Confirmar' };
@@ -59,7 +62,9 @@ const Correus = (function () {
       plantilles = plantillesData.plantilles;
       document.getElementById('correus-empty-notice').classList.toggle('hidden', plantilles.length !== 0);
       resetWizard();
+      aplicarPreseleccio_();
     } catch (err) {
+      preseleccioPendent = null;
       Util.showToast('Enviar correus: ' + err.message, 'error');
     }
   }
@@ -79,7 +84,7 @@ const Correus = (function () {
   }
 
   function resetWizard() {
-    wizard = { step: 'alumne', alumneRow: null, items: [], adjunts: '', preview: [] };
+    wizard = { step: 'alumne', alumneRow: null, items: [], adjunts: '', preview: [], origen: null };
     cercaAlumne = '';
     vistaProgramats = false;
     programatEditant = null;
@@ -87,6 +92,89 @@ const Correus = (function () {
   }
 
   function reload() { loadOptions(); }
+
+  // ==== DES DEL DASHBOARD ("Enviar recordatori") ====
+
+  // Paraules clau (sense accents ni majúscules) per trobar la plantilla que
+  // correspon a cada motiu. Es comparen amb el nom de les plantilles del full.
+  const PARAULES_MOTIU = {
+    acord: ['ref 05', 'ref05', 'ref 06', 'ref06', 'acord'],
+    hores: ['enregistrar hores', 'hores', 'quadern'],
+    inici: ['contacte inicial', 'contacteinicial', 'inici'],
+    seguiment: ['seguiment'],
+    valoracio: ['valoracio final', 'valoracio']
+  };
+
+  function normalitzar_(text) {
+    return String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+
+  function prepararDesDeDashboard(encarrec) {
+    preseleccioPendent = encarrec;
+  }
+
+  // Busca a "Enviament" l'alumne/a que ve del Dashboard (que és un altre
+  // Sheet): primer pel correu, després pel nom exacte i, si no, per paraules
+  // del nom (p. ex. "Marta Puig" ↔ "Marta Puig Serra"). Si n'hi ha cap o més
+  // d'una, retorna null i l'usuari el tria a mà.
+  function trobarAlumne_(nom, mail) {
+    const mailN = normalitzar_(mail);
+    if (mailN) {
+      const perMail = alumnes.filter(function (a) { return normalitzar_(a.correuAlumne) === mailN; });
+      if (perMail.length === 1) return perMail[0];
+    }
+    const nomN = normalitzar_(nom);
+    if (!nomN) return null;
+    const exactes = alumnes.filter(function (a) { return normalitzar_(a.nomAlumne) === nomN; });
+    if (exactes.length === 1) return exactes[0];
+    const paraules = nomN.split(' ');
+    const perParaules = alumnes.filter(function (a) {
+      const altres = normalitzar_(a.nomAlumne).split(' ');
+      const curta = paraules.length <= altres.length ? paraules : altres;
+      const llarga = curta === paraules ? altres : paraules;
+      return curta.length >= 2 && curta.every(function (p) { return llarga.indexOf(p) !== -1; });
+    });
+    return perParaules.length === 1 ? perParaules[0] : null;
+  }
+
+  function suggerirPlantilla_(motius) {
+    for (let i = 0; i < motius.length; i++) {
+      const paraules = PARAULES_MOTIU[motius[i].clau] || [];
+      for (let j = 0; j < paraules.length; j++) {
+        const p = plantilles.find(function (pl) { return normalitzar_(pl.nom).indexOf(paraules[j]) !== -1; });
+        if (p) return { plantilla: p, motiu: motius[i] };
+      }
+    }
+    return null;
+  }
+
+  function aplicarPreseleccio_() {
+    const encarrec = preseleccioPendent;
+    preseleccioPendent = null;
+    if (!encarrec) return;
+
+    const alumne = trobarAlumne_(encarrec.nom, encarrec.mail);
+    if (!alumne) {
+      // Només la primera paraula: si a l'altre full està escrit diferent
+      // (cognoms primer, sense segon cognom...), així encara surt a la llista.
+      cercaAlumne = String(encarrec.nom || '').trim().split(/\s+/)[0] || '';
+      wizard.origen = { avis: 'No he trobat "' + (encarrec.nom || '') + '" al full "Enviament" amb el mateix correu o nom. Tria\'l a la llista.' };
+      render();
+      return;
+    }
+
+    wizard.alumneRow = alumne.row;
+    const suggerida = suggerirPlantilla_(encarrec.motius || []);
+    if (suggerida) {
+      wizard.items = [{ plantillaNom: suggerida.plantilla.nom, data: '' }];
+      wizard.origen = { text: 'Suggerida: <strong>' + Util.escapeHtml(suggerida.plantilla.nom) + '</strong>, perquè ' + Util.escapeHtml(suggerida.motiu.text) + '. Pots canviar-la.' };
+    } else {
+      wizard.origen = { text: "No he trobat cap plantilla que encaixi amb la situació d'aquest alumne/a. Tria'n una." };
+    }
+    wizard.step = 'plantilla';
+    render();
+  }
 
   // ==== RENDER ====
 
@@ -126,6 +214,7 @@ const Correus = (function () {
       return !cercaAlumne || a.nomAlumne.toLowerCase().indexOf(cercaAlumne.toLowerCase()) !== -1;
     });
     return '<div class="wizard-step">' +
+      (wizard.origen && wizard.origen.avis ? '<p class="wizard-origen wizard-origen-avis">' + Util.escapeHtml(wizard.origen.avis) + '</p>' : '') +
       '<h3>Selecciona l\'alumne/a</h3>' +
       '<input id="w-cerca-alumne" type="text" class="wizard-search" placeholder="🔎 Cerca per nom..." value="' + Util.escapeHtml(cercaAlumne) + '">' +
       '<div class="wizard-list">' +
@@ -162,7 +251,9 @@ const Correus = (function () {
     return '<div class="wizard-step">' +
       '<button class="btn-link wizard-back" data-goto="tutor">← Canvia el tutor/a</button>' +
       '<h3>Selecciona una o més plantilles</h3>' +
-      '<p class="hint-text">Alumne/a: <strong>' + Util.escapeHtml(alumne ? alumne.nomAlumne : '') + '</strong>. ' +
+      (wizard.origen && wizard.origen.text ? '<p class="wizard-origen">✉️ ' + wizard.origen.text + '</p>' : '') +
+      '<p class="hint-text">Alumne/a: <strong>' + Util.escapeHtml(alumne ? alumne.nomAlumne : '') + '</strong>' +
+      (alumne ? ' · Tutor/a: ' + Util.escapeHtml(alumne.nomTutor || 'sense nom') + (alumne.correuTutor ? ' (' + Util.escapeHtml(alumne.correuTutor) + ')' : ' (sense correu)') : '') + '. ' +
       'Marca les plantilles que vulguis enviar; per a cadascuna pots triar quan (deixa la data buida per enviar-la ara mateix).</p>' +
       '<div class="wizard-list">' +
       plantilles.map(renderPlantillaItem).join('') +
@@ -543,5 +634,5 @@ const Correus = (function () {
     }
   }
 
-  return { init: init, reload: reload };
+  return { init: init, reload: reload, prepararDesDeDashboard: prepararDesDeDashboard };
 })();
