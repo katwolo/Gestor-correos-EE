@@ -247,7 +247,7 @@ const Correus = (function () {
   function renderProgramatsPanel() {
     const rows = programats.length
       ? programats.map(renderProgramatItem).join('')
-      : '<p class="hint-text">No hi ha cap correu programat.</p>';
+      : '<p class="empty-text">No hi ha cap correu programat.</p>';
     const hiHaPendents = programats.some(function (p) { return p.estat === 'Pendent'; });
     return '<div class="wizard-card">' +
       '<button id="w-tancar-programats" class="btn-link wizard-back">← Torna a l\'assistent</button>' +
@@ -257,14 +257,24 @@ const Correus = (function () {
           '<button id="w-processar-ara" class="btn-primary">▶ Processa els pendents ara</button>'
         : '') +
       '<p id="w-processar-resultat" class="hint-text"></p>' +
-      '<div class="wizard-list programats-list">' + rows + '</div>' +
+      (programats.length
+        ? '<div class="data-table programats-table">' +
+          '<div class="data-table-head programat-row"><span>Destinatari</span><span>Plantilla · data</span><span>Estat</span></div>' +
+          rows + '</div>'
+        : rows) +
       '</div>';
   }
 
+  // "2026-12-02" -> "02/12/2026" (si no té aquest format, es mostra tal qual).
+  function formatDataCurta(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso));
+    return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso);
+  }
+
   function estatProgramatClasse(estat) {
-    if (estat === 'Pendent') return 'programat-pendent';
-    if (estat === 'Enviat') return 'programat-enviat';
-    return 'programat-error';
+    if (estat === 'Pendent') return 'pill-warn';
+    if (estat === 'Enviat') return 'pill-success';
+    return 'pill-danger';
   }
 
   function renderProgramatItem(p) {
@@ -272,18 +282,18 @@ const Correus = (function () {
     const potEditar = p.estat === 'Pendent';
     const dataTxt = editing
       ? '<input type="date" id="w-edit-data-' + p.row + '" value="' + Util.escapeHtml(p.data) + '">'
-      : (p.data ? ('📅 ' + Util.escapeHtml(p.data)) : 'sense data (envia\'t a l\'instant quan es processi)');
-    return '<div class="list-item programat-item">' +
-      '<div class="programat-info">' +
-      '<div class="list-item-title">' + Util.escapeHtml(p.nomAlumne || '(sense nom)') + ' — ' + Util.escapeHtml(p.plantillaNom) + '</div>' +
-      '<div class="list-item-sub">' + dataTxt + ' · <span class="programat-estat ' + estatProgramatClasse(p.estat) + '">' + Util.escapeHtml(p.estat) + '</span></div>' +
-      '</div>' +
-      '<div class="programat-actions">' +
-      (potEditar ? (editing
+      : (p.data ? Util.escapeHtml(formatDataCurta(p.data)) : 'sense data (s\'envia en processar)');
+    return '<div class="programat-row">' +
+      '<div class="programat-cell"><div class="list-item-title">' + Util.escapeHtml(p.nomAlumne || '(sense nom)') + '</div></div>' +
+      '<div class="programat-cell"><div class="programat-plantilla">' + Util.escapeHtml(p.plantillaNom || '(sense plantilla)') + '</div>' +
+      '<div class="list-item-sub">' + dataTxt + '</div></div>' +
+      '<div class="programat-cell programat-cell-end">' +
+      '<span class="pill ' + estatProgramatClasse(p.estat) + '">' + Util.escapeHtml(p.estat) + '</span>' +
+      (potEditar ? '<div class="programat-actions">' + (editing
         ? '<button class="btn-link" data-desar-prog="' + p.row + '">💾 Desa</button>' +
           '<button class="btn-link" data-cancelar-prog="' + p.row + '">Cancel·la</button>'
-        : '<button class="btn-link" data-editar-prog="' + p.row + '">✏️</button>' +
-          '<button class="btn-link" data-eliminar-prog="' + p.row + '">🗑️</button>') : '') +
+        : '<button class="icon-btn icon-btn-sm" title="Canvia la data" data-editar-prog="' + p.row + '">✏️</button>' +
+          '<button class="icon-btn icon-btn-sm" title="Elimina" data-eliminar-prog="' + p.row + '">🗑️</button>') + '</div>' : '') +
       '</div>' +
       '</div>';
   }

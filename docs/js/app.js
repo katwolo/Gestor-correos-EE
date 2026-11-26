@@ -1,8 +1,15 @@
 const App = (function () {
   function init() {
-    document.querySelectorAll('.nav-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () { showSection(btn.dataset.section); });
+    document.querySelectorAll('.nav-btn[data-section]').forEach(function (btn) {
+      btn.addEventListener('click', function () { showSection(btn.dataset.section); closeNav(); });
     });
+
+    // Calaix lateral: s'obre amb el botó ☰ i es tanca en tocar fora, triar
+    // una secció o prémer Esc. En pantalles amples queda sempre visible.
+    document.getElementById('menu-btn').addEventListener('click', toggleNav);
+    document.getElementById('nav-scrim').addEventListener('click', closeNav);
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closeNav(); });
+    document.getElementById('nav-settings-btn').addEventListener('click', function () { closeNav(); openSettingsModal(); });
 
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
     document.getElementById('settings-close-btn').addEventListener('click', closeSettingsModal);
@@ -17,6 +24,16 @@ const App = (function () {
     Excel.init();
     Correus.init();
     Dashboard.load();
+  }
+
+  function toggleNav() {
+    const open = !document.body.classList.contains('nav-open');
+    document.body.classList.toggle('nav-open', open);
+    document.getElementById('menu-btn').setAttribute('aria-expanded', String(open));
+  }
+  function closeNav() {
+    document.body.classList.remove('nav-open');
+    document.getElementById('menu-btn').setAttribute('aria-expanded', 'false');
   }
 
   function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
@@ -42,8 +59,10 @@ const App = (function () {
   }
 
   function showSection(name) {
-    document.querySelectorAll('.nav-btn').forEach(function (b) {
-      b.classList.toggle('active', b.dataset.section === name);
+    document.querySelectorAll('.nav-btn[data-section]').forEach(function (b) {
+      const active = b.dataset.section === name;
+      b.classList.toggle('active', active);
+      if (active) document.getElementById('app-section-title').textContent = b.dataset.title;
     });
     document.querySelectorAll('.app-section').forEach(function (s) {
       s.classList.toggle('active', s.id === 'section-' + name);
