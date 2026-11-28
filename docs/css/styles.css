@@ -907,3 +907,110 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   line-height: 1.45;
 }
 .wizard-origen-avis { background: var(--warn-soft); }
+
+/* ---- Esquelets de càrrega ---- */
+
+.skeleton {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--muted-soft) 0%, var(--border) 50%, var(--muted-soft) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-brill 1.3s ease-in-out infinite;
+}
+.skeleton-line { height: 12px; }
+.skeleton-line-sm { height: 10px; }
+.skeleton-num { width: 40%; height: 32px; margin-top: 6px; }
+.skeleton-bar { height: 6px; width: 100%; margin-top: 6px; }
+.skeleton-tile { gap: 10px; }
+.skeleton-list {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.wizard-card .skeleton-list { border: none; }
+.skeleton-card { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-bottom: 1px solid var(--border); }
+.skeleton-card:last-child { border-bottom: none; }
+
+@keyframes skeleton-brill {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+/* ---- Excel oficial: cercador, vista de fitxes ---- */
+
+.excel-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.excel-toolbar .wizard-search { flex: 1; min-width: 200px; margin-bottom: 0; }
+.excel-resultat { min-height: 1.2em; margin-bottom: 8px; }
+
+.segmented { display: inline-flex; padding: 3px; gap: 2px; background: var(--muted-soft); border-radius: 10px; }
+.segmented-btn {
+  border: none;
+  background: none;
+  padding: 7px 14px;
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.segmented-btn.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 2px rgba(20, 30, 60, 0.1); }
+
+.excel-cards {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.excel-cards:has(> .skeleton-list), .excel-cards:has(> .empty-text) { background: none; border: none; }
+.excel-cards > .empty-text { padding: 0 2px; }
+
+.excel-card { border-bottom: 1px solid var(--border); }
+.excel-card:last-child { border-bottom: none; }
+.excel-card-cont .excel-card-head { padding-left: 28px; }
+.excel-card-open { background: var(--surface-alt); box-shadow: inset 3px 0 0 var(--primary); }
+
+.excel-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.excel-card-id { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.excel-card-title { font-weight: 600; overflow-wrap: anywhere; }
+.excel-card-cont .excel-card-title { font-weight: 500; color: var(--text-muted); }
+.excel-card-sub { font-size: 0.8rem; color: var(--text-muted); }
+.excel-card-chevron { font-size: 1.4rem; line-height: 1; color: var(--text-faint); transition: transform 0.15s; }
+.excel-card-open .excel-card-chevron { transform: rotate(90deg); color: var(--primary); }
+
+.excel-card-body { display: flex; flex-direction: column; gap: 18px; padding: 4px 16px 18px; }
+.excel-group .section-label { margin-bottom: 8px; }
+.excel-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 10px 12px; }
+.excel-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; border-radius: var(--radius-sm); transition: background 0.3s; }
+.excel-field-wide { grid-column: 1 / -1; }
+.excel-field label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+.excel-field input, .excel-field select, .excel-field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.excel-field textarea { resize: vertical; }
+.excel-field.saved input, .excel-field.saved select, .excel-field.saved textarea { border-color: var(--success); box-shadow: 0 0 0 2px rgba(var(--success-rgb), 0.25); }
+.excel-field.save-error input, .excel-field.save-error select, .excel-field.save-error textarea { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(var(--danger-rgb), 0.25); }
+.add-row-btn-card { align-self: flex-start; }

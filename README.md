@@ -33,7 +33,7 @@ A la fulla, les capçaleres són a la **fila 2** i les dades comencen a la **fil
 
 Per a cada grup es guarda:
 - **`estat`**: sempre la **fila més avall** (l'última introduïda) — és la que es fa servir per a tot l'estat "actual" de l'alumne (pràctiques en curs, empresa, acord, quadern, nota final, fase del conveni...).
-- **`totalHores`**: la **suma** de la columna "Hores realitzades" (columna **AC**, 29a) de **totes** les files del grup.
+- **`totalHores`**: la **suma** de la columna "Hores realitzades" (columna **AC**, 29a de 30) de **totes** les files del grup.
 - **`exempcio`**: l'últim valor no buit trobat a "Exempció (%)" entre totes les files del grup.
 
 En altres paraules: l'**estat/fase mostrats** corresponen sempre al **conveni més recent**, però les **hores del quadern es sumen entre tots els convenis** que hagi tingut l'alumne.
@@ -44,11 +44,16 @@ En altres paraules: l'**estat/fase mostrats** corresponen sempre al **conveni m�
 |---|---|
 | **Actius** | `!finalitzat && practiques === 'SI'` |
 | **Finalitzats** | La columna "Nota final" té algun valor |
-| **Pendents de documentació** | Actiu i (l'acord no és "Signat per tothom" **o** el quadern (R22) no és "Enviat definitiu") |
-| **Amb exempció de pràctiques** | El camp "Exempció (%)" té algun valor diferent de "No aplica" |
-| **Total alumnat** | Nombre de grups (alumnes) |
+| **Pendents de documentació** | Actiu i l'acord (ref05/06) no és "Signat per tothom" |
+| **Total alumnat** | Nombre de grups (alumnes). Surt el primer |
 
-Totes les tiles excepte "Total alumnat" són **clicables**: filtren la llista de targetes de sota (tornar a clicar-hi treu el filtre).
+Totes les tiles excepte "Total alumnat" són **clicables**: filtren la llista de sota (tornar a clicar-hi treu el filtre).
+
+L'exempció no té tile pròpia: es veu com una pastilla morada ("Exempció: 50%") a la fila de l'alumne/a.
+
+### Estat de cada alumne/a
+
+A la dreta del nom surt una pastilla amb l'estat actual: **Actiu**, **Falta doc.** (actiu amb l'acord sense signar), **Finalitzat** o **Sense pràctiques**.
 
 ### Les dues barres de progrés de cada alumne
 
@@ -72,6 +77,12 @@ La barra omple `índex_fase / (total_fases − 1)`: **buida** a "(Pendent)" (fas
 
 Les fases d'aquesta barra estan definides a `FASES_ACORD` (Code.gs), en el mateix ordre que les opcions de la columna "Acord (ref05) i pla activitats (ref06)" a `ROSTER_COLUMNS`. Si algun dia canvies les opcions d'aquesta columna, cal actualitzar **totes dues llistes** perquè coincideixin — i també la condició de la tile "Pendents de documentació", que compara l'acord amb el valor final ("Signat per tothom").
 
+### Botó "Enviar recordatori"
+
+En desplegar un alumne/a, el botó **✉️ Enviar recordatori** obre "Enviar correus" directament al pas de plantilles, amb l'alumne/a ja triat i una plantilla suggerida segons la seva situació (acord sense signar → "Ref 05 i Ref 06", data final passada → "Valoració final", hores pendents → "Enregistrar hores", sense començar → "Contacte inicial", si no → "Seguiment"). La suggerència es busca per paraules clau al **nom** de les plantilles; si en canvies el nom i ja no les conté, l'assistent avisa i la tries a mà.
+
+Com que el Dashboard i "Enviar correus" fan servir Sheets diferents, l'alumne/a es busca al full "Enviament" pel correu, després pel nom exacte i després per les paraules del nom (sense accents ni majúscules). Si no el troba, ho avisa i deixa la cerca preparada.
+
 ### Cercador d'alumnes
 
 Al costat del títol "Alumnat" hi ha un camp de cerca per nom. Filtra en temps real la llista de targetes de sota i es pot combinar amb el filtre d'una tile (p. ex. "Actius" + escriure un nom per trobar-lo ràpid dins d'aquell subconjunt).
@@ -80,13 +91,20 @@ Al costat del títol "Alumnat" hi ha un camp de cerca per nom. Filtra en temps r
 
 ## 2. Excel oficial
 
-Graella editable directament sobre la primera pestanya de l'Excel oficial (`getSheetData` / `updateCell` / `insertRow`), sense passar per la interfície de Google Sheets:
+Editor de la primera pestanya de l'Excel oficial (`getSheetData` / `updateCell` / `insertRow`), sense passar per la interfície de Google Sheets. Té dues vistes, que es trien amb el selector **Fitxes / Taula** (la tria es recorda en aquell navegador; per defecte, fitxes al mòbil i taula a l'ordinador):
+
+- **Fitxes**: una fitxa per fila. En obrir-la, els 30 camps surten agrupats per temes (Alumne/a, Empresa i conveni, Documentació, Seguiment, Avaluació i tancament). Les files sense nom surten com "↳ Un altre conveni de …". Cada fitxa té el botó **"＋ Afegir un conveni a sota"**.
+- **Taula**: la graella sencera, com al Sheet.
+
+A dalt hi ha un **cercador per nom o empresa** que funciona a les dues vistes (inclou els convenis addicionals de l'alumne/a trobat).
+
+Detalls de la vista de taula:
 
 - **Capçalera, botó "+" i columna del nom fixes** (`position: sticky`, les dues primeres columnes) perquè es pugui fer scroll horitzontal per la resta de columnes sense perdre de vista de quin alumne es tracta.
 - Cada columna es renderitza segons el seu **tipus**: `select` (desplegable), `data` (input de data) o `text` (cel·la editable en línia). Els canvis es desen a l'instant (`updateCell`) en editar/desseleccionar la cel·la, amb un flaix verd/vermell de confirmació.
 - Cada fila té un botó **"+"** a la primera columna: insereix una fila buida just a sota (mateix mecanisme que "Insereix fila" de Sheets, que copia format i validacions). Serveix per afegir un **nou conveni** a un alumne existent: es deixa el nom en blanc perquè `agruparAlumnesRoster_` l'agrupi automàticament amb les files anteriors del mateix alumne.
 
-No hi ha cap "configuració" que calgui executar sobre aquest Sheet: l'app hi llegeix/escriu directament respectant la seva pròpia estructura de 29 columnes.
+No hi ha cap "configuració" que calgui executar sobre aquest Sheet: l'app hi llegeix/escriu directament respectant la seva pròpia estructura de 30 columnes.
 
 ### D'on surten les opcions dels desplegables
 
@@ -103,7 +121,6 @@ Per a cada columna `select`, `getSheetData` (`obtenirOpcionsValidacio_`) mira si
 | "Exempció (%)" | `teExempcio_`/`parseExempcioPercent_` reconeixen "No aplica" i un percentatge (`25%`, etc.) |
 | "Ha començat pràctiques" | `actiu` compara amb `'SI'` |
 | "Nota final" | `finalitzat` és cert si la cel·la té qualsevol valor |
-| "R22 (Quadern FCT)" | la tile "Pendents de documentació" compara amb `'Enviat definitiu'` |
 
 Si canvies el desplegable d'aquestes columnes concretes a Sheets (per exemple, renombrar "Signat per tothom"), el desplegable de la graella s'actualitzarà sol, però caldrà avisar perquè s'actualitzi també la lògica corresponent a `Code.gs` — si no, la tile o la barra de progrés poden deixar de reflectir bé la realitat (com ja va passar un cop). Per a la resta de columnes `select` (Renúncia, R02/R03, Agendes SBID, etc.), que no alimenten cap càlcul, pots editar-les lliurement a Sheets sense cap efecte secundari.
 
@@ -111,7 +128,7 @@ Si canvies el desplegable d'aquestes columnes concretes a Sheets (per exemple, r
 
 Si enganxes l'enllaç d'un Google Sheets completament nou (sense capçaleres ni dades), en lloc de la graella apareix un avís amb el botó **"🆕 Preparar aquest full nou per a l'ús amb la web"** (`configurarFullOficial`). En prémer'l:
 
-- Escriu les 29 capçaleres de `ROSTER_COLUMNS` a la fila 2.
+- Escriu les 30 capçaleres de `ROSTER_COLUMNS` a la fila 2.
 - Aplica els desplegables natius de Google Sheets a les columnes de tipus `select` (per si mai obres el full directament — la web sempre fa servir el seu propi desplegable i no en depèn).
 - Afegeix una primera fila buida (fila 3) perquè ja hi hagi on prémer "+" i començar a introduir alumnat.
 
@@ -213,3 +230,23 @@ Igual que a "Excel oficial", si enganxes l'enllaç d'un Sheet completament nou i
 La web no té pantalla de login: s'entra directament al Dashboard. Però el servidor demana una **contrasenya** (`APP_PASSWORD`) a cada petició. La primera vegada que s'obre la web en un dispositiu surt un diàleg per escriure-la; es desa en aquell navegador sense caducitat i no es torna a demanar, tret que es canviï al servidor. També es pot canviar o esborrar des del diàleg de **Configuració** (⚙️).
 
 A més, el servidor pot limitar-se als Sheets autoritzats (`ALLOWED_SHEET_IDS`). Vegeu la nota de seguretat completa a `DEPLOY.md`.
+
+---
+
+## Proves automàtiques
+
+Les proves són a `tests/` i no necessiten instal·lar res (només Node.js 18 o més nou):
+
+```
+npm test
+```
+
+Comproven, entre altres coses:
+
+- Els càlculs del Dashboard: agrupació de files en alumnes, hores i exempcions, fases de l'acord i comptadors de les tiles.
+- Els correus: substitució de marcadors, any acadèmic, destinataris i blocs clàssics.
+- La seguretat de l'API: contrasenya i Sheets permesos.
+- Que els números de columna de la web (`COL_*` a `dashboard.js`) i les opcions de l'acord coincideixen amb `ROSTER_COLUMNS` de `Code.gs`. Si algun dia es mou una columna i no s'actualitza tot, aquesta prova falla.
+- Que els fitxers de la web no tenen errors de sintaxi i que `index.html` els carrega tots.
+
+GitHub les executa sol a cada canvi (pestanya **Actions** del repositori).

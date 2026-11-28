@@ -38,5 +38,23 @@ const Util = (function () {
     return null;
   }
 
-  return { qs: qs, escapeHtml: escapeHtml, debounce: debounce, showToast: showToast, extractSheetId: extractSheetId };
+  // "Esquelets" de càrrega: formes grises animades que ocupen el lloc del
+  // contingut mentre arriba la resposta del servidor (Apps Script pot trigar
+  // uns segons), en lloc de deixar la pantalla buida.
+  function repetir_(n, html) { return new Array(n + 1).join(html); }
+
+  function skeletonTiles(n) {
+    return repetir_(n, '<div class="tile skeleton-tile" aria-hidden="true"><span class="skeleton skeleton-line" style="width:60%"></span><span class="skeleton skeleton-num"></span></div>');
+  }
+
+  function skeletonCards(n) {
+    return '<div class="skeleton-list" role="status" aria-label="Carregant...">' +
+      repetir_(n, '<div class="skeleton-card"><span class="skeleton skeleton-line" style="width:45%"></span><span class="skeleton skeleton-line skeleton-line-sm" style="width:30%"></span><span class="skeleton skeleton-bar"></span></div>') +
+      '</div>';
+  }
+
+  return {
+    qs: qs, escapeHtml: escapeHtml, debounce: debounce, showToast: showToast, extractSheetId: extractSheetId,
+    skeletonTiles: skeletonTiles, skeletonCards: skeletonCards
+  };
 })();
