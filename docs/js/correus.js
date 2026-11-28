@@ -53,6 +53,9 @@ const Correus = (function () {
   async function loadOptions() {
     const sheetId = State.getSheetIdCorreus();
     if (!sheetId) return;
+    if (!alumnes.length && !plantilles.length) {
+      document.getElementById('correus-wizard').innerHTML = '<div class="wizard-card">' + Util.skeletonCards(3) + '</div>';
+    }
     try {
       const [alumnesData, plantillesData] = await Promise.all([
         Api.call('getStudents', { sheetId: sheetId }),
@@ -479,8 +482,9 @@ const Correus = (function () {
     });
 
     if (wizard.step === 'alumne') {
+      // Sense alumnes al full no hi ha cercador (només un avís).
       const cercaInput = document.getElementById('w-cerca-alumne');
-      cercaInput.addEventListener('input', Util.debounce(function (ev) {
+      if (cercaInput) cercaInput.addEventListener('input', Util.debounce(function (ev) {
         cercaAlumne = ev.target.value;
         render();
         document.getElementById('w-cerca-alumne').focus();

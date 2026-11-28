@@ -63,7 +63,16 @@
       </div>
 
       <div id="excel-grid-wrap" class="hidden">
-        <div class="table-scroll">
+        <div class="excel-toolbar">
+          <input id="excel-cerca" type="search" class="wizard-search" placeholder="🔎 Cerca per nom o empresa..." aria-label="Cerca per nom o empresa">
+          <div class="segmented" role="group" aria-label="Com vols veure les dades">
+            <button type="button" class="segmented-btn" data-vista="fitxes">Fitxes</button>
+            <button type="button" class="segmented-btn" data-vista="taula">Taula</button>
+          </div>
+        </div>
+        <p id="excel-resultat" class="hint-text excel-resultat"></p>
+        <div id="excel-cards" class="excel-cards"></div>
+        <div id="excel-table-wrap" class="table-scroll">
           <table id="excel-table" class="excel-table"></table>
         </div>
       </div>

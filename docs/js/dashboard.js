@@ -112,6 +112,9 @@ const Dashboard = (function () {
       renderTiles(tiles, tilesActuals);
       renderStudents(students);
       if (Date.now() - ultimaCarrega < CACHE_RECENT_MS) return;
+    } else {
+      tiles.innerHTML = Util.skeletonTiles(4);
+      students.innerHTML = Util.skeletonCards(4);
     }
     await refresh();
   }
@@ -127,6 +130,9 @@ const Dashboard = (function () {
       renderTiles(tiles, data.tiles);
       renderStudents(students);
     } catch (err) {
+      // Si encara hi havia els esquelets de càrrega, es treuen.
+      if (tiles.querySelector('.skeleton-tile')) tiles.innerHTML = '';
+      if (students.querySelector('.skeleton-list')) students.innerHTML = '';
       Util.showToast('Dashboard: ' + err.message, 'error');
     }
   }
